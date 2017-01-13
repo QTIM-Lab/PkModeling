@@ -16,10 +16,11 @@
 #include <itkGradientMagnitudeImageFilter.h>
 #include <itkImageRegionIterator.h>
 #include <itkLevenbergMarquardtOptimizer.h>
+// #include <itkAmoebaOptimizer.h>
 #include "PkSolver.h"
 #include "itkTimeProbesCollectorBase.h"
 #include <string>
-
+// hello
 namespace itk
 {
 //
@@ -58,6 +59,10 @@ bool pk_solver (int signalSize, const float* timeAxis,
 
   // Levenberg Marquardt optimizer
   itk::LevenbergMarquardtOptimizer::Pointer  optimizer = itk::LevenbergMarquardtOptimizer::New();
+
+  // Simplex optimizer
+  // itk::AmoebaOptimizer::Pointer  optimizer = itk::AmoebaOptimizer::New();
+
   LMCostFunction::Pointer costFunction = LMCostFunction::New();
 
   LMCostFunction::ParametersType initialValue;

@@ -16,6 +16,7 @@
 #define PkSolver_h_
 
 #include "itkLevenbergMarquardtOptimizer.h"
+// #include "itkAmoebaOptimizer.h"
 #include <math.h>
 #include <vnl/algo/vnl_convolve.h>
 #include "itkArray.h"
@@ -83,7 +84,6 @@ public:
   typedef Superclass::MeasureType                 MeasureType, ArrayType;
   typedef Superclass::ParametersValueType         ValueType;
 
-
   float m_Hematocrit;
 
   int m_ModelType;
@@ -133,37 +133,97 @@ public:
   MeasureType GetValue( const ParametersType & parameters) const
   {
     MeasureType measure(RangeDimension);
+	MeasureType measure2(RangeDimension);
+	MeasureType measure3(RangeDimension);
 
     ValueType Ktrans = parameters[0];
     ValueType Ve = parameters[1];
+	//Ktrans = .2;
+	//Ve = .1;
 
-    ArrayType VeTerm;
-    VeTerm = -Ktrans/Ve*Time;
-    ValueType deltaT = Time(1) - Time(0);
+	ArrayType VeTerm;
+	VeTerm = -Ktrans / Ve*Time;
+	ValueType deltaT = Time(1) - Time(0);
 
-    if( m_ModelType == TOFTS_3_PARAMETER)
+	ValueType log_e = (-Ktrans / Ve)*deltaT;
+	ValueType capital_E = exp(log_e);
+	ValueType log_e_2 = pow(log_e, 2);
+
+	ValueType block_A = capital_E - log_e - 1;
+	ValueType block_B = capital_E - (capital_E * log_e) - 1;
+	ValueType block_ktrans = Ktrans * deltaT / log_e_2;
+
+		;    if (m_ModelType == TOFTS_3_PARAMETER)
       {
       ValueType f_pv = parameters[2];
       measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb));
-      }
+      
+	}
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
-      measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
-      }
+    
+    // This is the original integration method.
+    // measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
 
-    return measure;
+	// This is the new method.
+	  measure2[0] = Cv[0];
+	  for (unsigned int t = 1; t < RangeDimension; ++t) {
+		  measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
+	  }
+
+    // Fully understand that this is a strange way to subtract from observed.
+    for (unsigned int t = 1; t < RangeDimension; ++t) {
+      measure3[t] = Cv[t] - measure2[t];
+    }
+
+    // Test with AIF [1 2 3 4 5]
+	  //for (unsigned int t = 1; t < 5; ++t) {
+		 // measure2[t] = measure2[t - 1] * capital_E + block_ktrans * ((t + 1) * block_A - t * block_B);
+		 // std::cout << "Term_A: " << (t + 1) * block_A << std::endl;
+		 // std::cout << "Term_B: " << t * block_B << std::endl;
+		 // std::cout << "AIF Part: " << block_ktrans * ((t + 1) * block_A - t * block_B) << std::endl;
+		 // std::cout << "Prev Est Conc " << measure2[t - 1] << std::endl;
+		 // std::cout << "Est Conc Part " << measure2[t - 1] * capital_E << std::endl;
+		 // std::cout << "New Est Conc " << measure2[t - 1] * capital_E + block_ktrans * ((t + 1) * block_A - t * block_B) << std::endl;
+	  //}
+
+	  }
+
+	measure = measure3;
+
+	//std::cout << "KTrans: " << Ktrans << std::endl;
+	//std::cout << "log e: " << log_e << std::endl;
+	//std::cout << "capital_E: " << capital_E << std::endl;
+	//std::cout << "log_e_2: " << log_e_2 << std::endl;
+	//std::cout << "Block A: " << block_A << std::endl;
+	//std::cout << "Block B: " << block_B << std::endl;
+	//std::cout << "Block KTrans: " << block_ktrans << std::endl;
+	//std::cout << "working Method " << measure[500] << std::endl;
+	//std::cout << "Nonworking Method: " << measure2[500] << std::endl;
+
+  return measure;
   }
 
-  MeasureType GetFittedFunction( const ParametersType & parameters) const
+  MeasureType GetFittedFunction(const ParametersType & parameters) const
   {
-    MeasureType measure(RangeDimension);
+	  MeasureType measure(RangeDimension);
+	  MeasureType measure2(RangeDimension);
 
-    ValueType Ktrans = parameters[0];
-    ValueType Ve = parameters[1];
+	  ValueType Ktrans = parameters[0];
+	  ValueType Ve = parameters[1];
 
-    ArrayType VeTerm;
-    VeTerm = -Ktrans/Ve*Time;
-    ValueType deltaT = Time(1) - Time(0);
+	  ArrayType VeTerm;
+	  VeTerm = -Ktrans / Ve*Time;
+	  ValueType deltaT = Time(1) - Time(0);
+
+	  ValueType log_e = (-Ktrans / Ve)*deltaT;
+	  ValueType capital_E = exp(log_e);
+	  ValueType log_e_2 = pow(log_e, 2);
+
+	  ValueType block_A = capital_E - log_e - 1;
+	  ValueType block_B = capital_E - (capital_E * log_e) - 1;
+	  ValueType block_ktrans = Ktrans * deltaT / log_e_2;
+
 
     if( m_ModelType == TOFTS_3_PARAMETER)
       {
@@ -172,8 +232,24 @@ public:
       }
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
-      measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
+
+	// original method
+      // measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
+		  
+		  // new method
+		  measure2[0] = 0;
+		  for (unsigned int t = 1; t < RangeDimension; ++t) {
+			  measure2[t] = (measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
+		  }
+
       }
+
+	measure = measure2;
+
+	std::cout << "Generated Ktrans: " << Ktrans << std::endl;
+	std::cout << "Generated Ve: " << Ve << std::endl;
+	//std::cout << "CorrectAlgorithm: " << measure[500] << std::endl;
+	//std::cout << "IncorrectAlgorithm: " << measure2[500] << std::endl;
 
     return measure;
   }
@@ -261,6 +337,7 @@ public:
 
   void Execute(const itk::Object * object, const itk::EventObject & event)
   {
+	//std::cout << m_IterationNumber++ << std::endl;
     //std::cout << "Observer::Execute() " << std::endl;
     OptimizerPointer optimizer =
       dynamic_cast< OptimizerPointer >( object );
@@ -282,10 +359,13 @@ private:
   itk::FunctionEvaluationIterationEvent m_FunctionEvent;
   itk::GradientEvaluationIterationEvent m_GradientEvent;
 };
-bool pk_solver(int signalSize, const float* timeAxis,
+bool pk_solver(int signalSize, 
+               const float* timeAxis,
                const float* PixelConcentrationCurve,
                const float* BloodConcentrationCurve,
-               float& Ktrans, float& Ve, float& Fpv,
+               float& Ktrans, 
+               float& Ve, 
+               float& Fpv,
                float fTol = 1e-4f,
                float gTol = 1e-4f,
                float xTol = 1e-5f,
@@ -299,16 +379,24 @@ bool pk_solver(int signalSize, const float* timeAxis,
 // returns diagnostic error code from the VNL optimizer,
 //  as defined by OptimizerDiagnosticCodes, and masked to indicate
 //  wheather Ktrans or Ve were clamped.
-unsigned pk_solver(int signalSize, const float* timeAxis,
-               const float* PixelConcentrationCurve, const float* BloodConcentrationCurve,
-               float& Ktrans, float& Ve, float& Fpv,
-               float fTol, float gTol,float xTol,
-               float epsilon, int maxIter, float hematocrit,
-               itk::LevenbergMarquardtOptimizer* optimizer,
-               LMCostFunction* costFunction,
-               int modelType = itk::LMCostFunction::TOFTS_2_PARAMETER,
-               int constantBAT = 0,
-               const std::string BATCalculationMode = "PeakGradient");
+unsigned pk_solver(int signalSize, 
+                const float* timeAxis,
+                const float* PixelConcentrationCurve, 
+                const float* BloodConcentrationCurve,
+                float& Ktrans,
+                float& Ve, 
+                float& Fpv,
+                float fTol, 
+                float gTol,
+                float xTol,
+                float epsilon, 
+                int maxIter, 
+                float hematocrit,
+                itk::LevenbergMarquardtOptimizer* optimizer,
+                LMCostFunction* costFunction,
+                int modelType = itk::LMCostFunction::TOFTS_2_PARAMETER,
+                int constantBAT = 0,
+                const std::string BATCalculationMode = "PeakGradient");
 
 void pk_report();
 void pk_clear();
