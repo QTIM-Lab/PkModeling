@@ -171,35 +171,14 @@ public:
 		  measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
 	  }
 
-    // Fully understand that this is a strange way to subtract from observed.
+    // I fully understand that this is a strange way to subtract from observed.
     for (unsigned int t = 1; t < RangeDimension; ++t) {
       measure3[t] = Cv[t] - measure2[t];
     }
 
-    // Test with AIF [1 2 3 4 5]
-	  //for (unsigned int t = 1; t < 5; ++t) {
-		 // measure2[t] = measure2[t - 1] * capital_E + block_ktrans * ((t + 1) * block_A - t * block_B);
-		 // std::cout << "Term_A: " << (t + 1) * block_A << std::endl;
-		 // std::cout << "Term_B: " << t * block_B << std::endl;
-		 // std::cout << "AIF Part: " << block_ktrans * ((t + 1) * block_A - t * block_B) << std::endl;
-		 // std::cout << "Prev Est Conc " << measure2[t - 1] << std::endl;
-		 // std::cout << "Est Conc Part " << measure2[t - 1] * capital_E << std::endl;
-		 // std::cout << "New Est Conc " << measure2[t - 1] * capital_E + block_ktrans * ((t + 1) * block_A - t * block_B) << std::endl;
-	  //}
-
 	  }
 
 	measure = measure3;
-
-	//std::cout << "KTrans: " << Ktrans << std::endl;
-	//std::cout << "log e: " << log_e << std::endl;
-	//std::cout << "capital_E: " << capital_E << std::endl;
-	//std::cout << "log_e_2: " << log_e_2 << std::endl;
-	//std::cout << "Block A: " << block_A << std::endl;
-	//std::cout << "Block B: " << block_B << std::endl;
-	//std::cout << "Block KTrans: " << block_ktrans << std::endl;
-	//std::cout << "working Method " << measure[500] << std::endl;
-	//std::cout << "Nonworking Method: " << measure2[500] << std::endl;
 
   return measure;
   }
@@ -245,11 +224,6 @@ public:
       }
 
 	measure = measure2;
-
-	std::cout << "Generated Ktrans: " << Ktrans << std::endl;
-	std::cout << "Generated Ve: " << Ve << std::endl;
-	//std::cout << "CorrectAlgorithm: " << measure[500] << std::endl;
-	//std::cout << "IncorrectAlgorithm: " << measure2[500] << std::endl;
 
     return measure;
   }
