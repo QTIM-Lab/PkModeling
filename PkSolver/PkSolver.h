@@ -153,7 +153,7 @@ public:
 	ValueType block_B = capital_E - (capital_E * log_e) - 1;
 	ValueType block_ktrans = Ktrans * deltaT / log_e_2;
 
-		;    if (m_ModelType == TOFTS_3_PARAMETER)
+	if (m_ModelType == TOFTS_3_PARAMETER)
       {
       ValueType f_pv = parameters[2];
       measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb));
@@ -162,19 +162,21 @@ public:
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
     
-    // This is the original integration method.
-    // measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
+      // This is the original integration method.
+      // measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
 
-	// This is the new method.
+	  // This is the new method.
 	  measure2[0] = Cv[0];
-	  for (unsigned int t = 1; t < RangeDimension; ++t) {
-		  measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
-	  }
+	  for (unsigned int t = 1; t < RangeDimension; ++t) 
+	    {
+	    measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
+	    }
 
-    // I fully understand that this is a strange way to subtract from observed.
-    for (unsigned int t = 1; t < RangeDimension; ++t) {
-      measure3[t] = Cv[t] - measure2[t];
-    }
+      // I fully understand that this is a strange way to subtract from observed.
+      for (unsigned int t = 1; t < RangeDimension; ++t) 
+	    {
+        measure3[t] = Cv[t] - measure2[t];
+        }
 
 	  }
 
@@ -212,14 +214,15 @@ public:
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
 
-	// original method
+	  // Original Integration Method
       // measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
 		  
-		  // new method
-		  measure2[0] = 0;
-		  for (unsigned int t = 1; t < RangeDimension; ++t) {
-			  measure2[t] = (measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
-		  }
+	  // New Integration Method
+	  measure2[0] = 0;
+	  for (unsigned int t = 1; t < RangeDimension; ++t) 
+	    {
+	    measure2[t] = (measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
+		}
 
       }
 
