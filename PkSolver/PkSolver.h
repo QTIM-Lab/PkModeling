@@ -133,100 +133,96 @@ public:
   MeasureType GetValue( const ParametersType & parameters) const
   {
     MeasureType measure(RangeDimension);
-	MeasureType measure2(RangeDimension);
-	MeasureType measure3(RangeDimension);
+    MeasureType measure2(RangeDimension);
+    MeasureType measure3(RangeDimension);
 
     ValueType Ktrans = parameters[0];
     ValueType Ve = parameters[1];
-	//Ktrans = .2;
-	//Ve = .1;
+    //Ktrans = .2;
+    //Ve = .1;
 
-	ArrayType VeTerm;
-	VeTerm = -Ktrans / Ve*Time;
-	ValueType deltaT = Time(1) - Time(0);
+    ArrayType VeTerm;
+    VeTerm = -Ktrans / Ve*Time;
+    ValueType deltaT = Time(1) - Time(0);
 
-	ValueType log_e = (-Ktrans / Ve)*deltaT;
-	ValueType capital_E = exp(log_e);
-	ValueType log_e_2 = pow(log_e, 2);
+    ValueType log_e = (-Ktrans / Ve)*deltaT;
+    ValueType capital_E = exp(log_e);
+    ValueType log_e_2 = pow(log_e, 2);
 
-	ValueType block_A = capital_E - log_e - 1;
-	ValueType block_B = capital_E - (capital_E * log_e) - 1;
-	ValueType block_ktrans = Ktrans * deltaT / log_e_2;
+    ValueType block_A = capital_E - log_e - 1;
+    ValueType block_B = capital_E - (capital_E * log_e) - 1;
+    ValueType block_ktrans = Ktrans * deltaT / log_e_2;
 
-	if (m_ModelType == TOFTS_3_PARAMETER)
+    if (m_ModelType == TOFTS_3_PARAMETER)
       {
-      ValueType f_pv = parameters[2];
-      measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb));
-      
-	}
+        ValueType f_pv = parameters[2];
+        measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb));
+      }
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
-    
-      // This is the original integration method.
-      // measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
+      
+        // This is the original integration method.
+        // measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
 
-	  // This is the new method.
-	  measure2[0] = Cv[0];
-	  for (unsigned int t = 1; t < RangeDimension; ++t) 
-	    {
-	    measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
-	    }
+        // This is the new method.
+        measure2[0] = Cv[0];
+        for (unsigned int t = 1; t < RangeDimension; ++t) 
+          {
+            measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
+          }
 
-      // I fully understand that this is a strange way to subtract from observed.
-      for (unsigned int t = 1; t < RangeDimension; ++t) 
-	    {
-        measure3[t] = Cv[t] - measure2[t];
-        }
+        // I fully understand that this is a strange way to subtract from observed.
+        for (unsigned int t = 1; t < RangeDimension; ++t) 
+          {
+            measure3[t] = Cv[t] - measure2[t];
+          }
+          
+        measure = measure3;
+      }
 
-	  }
-
-	measure = measure3;
-
-  return measure;
+    return measure;
   }
 
   MeasureType GetFittedFunction(const ParametersType & parameters) const
   {
-	  MeasureType measure(RangeDimension);
-	  MeasureType measure2(RangeDimension);
+    MeasureType measure(RangeDimension);
+    MeasureType measure2(RangeDimension);
 
-	  ValueType Ktrans = parameters[0];
-	  ValueType Ve = parameters[1];
+    ValueType Ktrans = parameters[0];
+    ValueType Ve = parameters[1];
 
-	  ArrayType VeTerm;
-	  VeTerm = -Ktrans / Ve*Time;
-	  ValueType deltaT = Time(1) - Time(0);
+    ArrayType VeTerm;
+    VeTerm = -Ktrans / Ve*Time;
+    ValueType deltaT = Time(1) - Time(0);
 
-	  ValueType log_e = (-Ktrans / Ve)*deltaT;
-	  ValueType capital_E = exp(log_e);
-	  ValueType log_e_2 = pow(log_e, 2);
+    ValueType log_e = (-Ktrans / Ve)*deltaT;
+    ValueType capital_E = exp(log_e);
+    ValueType log_e_2 = pow(log_e, 2);
 
-	  ValueType block_A = capital_E - log_e - 1;
-	  ValueType block_B = capital_E - (capital_E * log_e) - 1;
-	  ValueType block_ktrans = Ktrans * deltaT / log_e_2;
+    ValueType block_A = capital_E - log_e - 1;
+    ValueType block_B = capital_E - (capital_E * log_e) - 1;
+    ValueType block_ktrans = Ktrans * deltaT / log_e_2;
 
 
     if( m_ModelType == TOFTS_3_PARAMETER)
       {
-      ValueType f_pv = parameters[2];
-      measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb);
+        ValueType f_pv = parameters[2];
+        measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb);
       }
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
 
-	  // Original Integration Method
-      // measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
-		  
-	  // New Integration Method
-	  measure2[0] = 0;
-	  for (unsigned int t = 1; t < RangeDimension; ++t) 
-	    {
-	    measure2[t] = (measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
-		}
-
+        // Original Integration Method
+        // measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
+          
+        // New Integration Method
+        measure2[0] = 0;
+        for (unsigned int t = 1; t < RangeDimension; ++t) 
+          {
+            measure2[t] = (measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
+          }
+        measure = measure2;
       }
-
-	measure = measure2;
 
     return measure;
   }
@@ -314,7 +310,7 @@ public:
 
   void Execute(const itk::Object * object, const itk::EventObject & event)
   {
-	//std::cout << m_IterationNumber++ << std::endl;
+  //std::cout << m_IterationNumber++ << std::endl;
     //std::cout << "Observer::Execute() " << std::endl;
     OptimizerPointer optimizer =
       dynamic_cast< OptimizerPointer >( object );
