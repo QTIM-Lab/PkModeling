@@ -397,7 +397,7 @@ float area_under_curve(int signalSize,
     //printf("lastIndex is %f,%f\n", (float) concentrationValues[i],(float)timeValues[i]);
     }
 
-  //get auc
+  //get aucg
   auc = intergrate(concentrationValues,timeValues,(lastIndex-BATIndex+2));
 
   delete [] concentrationValues;

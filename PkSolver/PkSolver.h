@@ -92,6 +92,8 @@ public:
   {
   }
 
+  #define IS_NAN(x) ((x) != (x))
+
   void SetHematocrit (float hematocrit) {
     m_Hematocrit = hematocrit;
   }
@@ -138,8 +140,13 @@ public:
 
     ValueType Ktrans = parameters[0];
     ValueType Ve = parameters[1];
-    //Ktrans = .2;
-    //Ve = .1;
+
+	if (IS_NAN(Ktrans)){
+		Ktrans = .2;
+	}
+	if (IS_NAN(Ve)){
+		Ve = .1;
+	}
 
     ArrayType VeTerm;
     VeTerm = -Ktrans / Ve*Time;
@@ -223,6 +230,13 @@ public:
           }
         measure = measure2;
       }
+
+	#define IS_NAN(x) ((x) != (x))
+
+	if (IS_NAN(Ktrans)){
+		//std::cout << "Generated Ktrans: " << Ktrans << std::endl;
+		//std::cout << "Generated Ve: " << Ve << std::endl;
+	}
 
     return measure;
   }
