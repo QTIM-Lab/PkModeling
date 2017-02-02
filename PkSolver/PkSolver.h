@@ -142,10 +142,11 @@ public:
     ValueType Ve = parameters[1];
 
 	if (IS_NAN(Ktrans)){
-		Ktrans = .2;
+		Ktrans = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
 	}
 	if (IS_NAN(Ve)){
-		Ve = .1;
+		Ve = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
+		//std::cout << "Generated Ve: " << Ve << std::endl;
 	}
 
     ArrayType VeTerm;
@@ -172,7 +173,7 @@ public:
         // measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
 
         // This is the new method.
-        measure2[0] = Cv[0];
+        measure2[0] = 0;
         for (unsigned int t = 1; t < RangeDimension; ++t) 
           {
             measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
@@ -197,6 +198,13 @@ public:
 
     ValueType Ktrans = parameters[0];
     ValueType Ve = parameters[1];
+
+	if (IS_NAN(Ktrans)){
+		Ktrans = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
+	}
+	if (IS_NAN(Ve)){
+		Ve = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
+	}
 
     ArrayType VeTerm;
     VeTerm = -Ktrans / Ve*Time;
@@ -230,8 +238,6 @@ public:
           }
         measure = measure2;
       }
-
-	#define IS_NAN(x) ((x) != (x))
 
 	if (IS_NAN(Ktrans)){
 		//std::cout << "Generated Ktrans: " << Ktrans << std::endl;
