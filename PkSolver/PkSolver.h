@@ -16,7 +16,7 @@
 #define PkSolver_h_
 
 #include "itkLevenbergMarquardtOptimizer.h"
-// #include "itkAmoebaOptimizer.h"
+#include "itkAmoebaOptimizer.h"
 #include <math.h>
 #include <vnl/algo/vnl_convolve.h>
 #include "itkArray.h"
@@ -26,6 +26,8 @@
 #define M_PI 3.1415926535897932384626433832795
 
 // codes defined in ITKv4 vnl_levenberg_marquardt.cxx:386
+// These diagnoistic codes will likely not work for the Amoeba optimizer?
+// Need to check - not sure how Diagnoistic codes work.
 enum OptimizerDiagnosticCodes {
   ERROR_FAILURE = 0,
   ERROR_DODGY_INPUT = 1,
@@ -65,11 +67,11 @@ const unsigned NumOptimizerDiagnosticCodes = 11;
 namespace itk
 {
 
-class LMCostFunction: public itk::MultipleValuedCostFunction
+class AmoebaCostFunction: public itk::SingleValuedCostFunction
 {
 public:
-  typedef LMCostFunction                    Self;
-  typedef itk::MultipleValuedCostFunction   Superclass;
+  typedef AmoebaCostFunction                    Self;
+  typedef itk::SingleValuedCostFunction   Superclass;
   typedef itk::SmartPointer<Self>           Pointer;
   typedef itk::SmartPointer<const Self>     ConstPointer;
   itkNewMacro( Self );
@@ -81,6 +83,8 @@ public:
 
   typedef Superclass::ParametersType              ParametersType;
   typedef Superclass::DerivativeType              DerivativeType;
+  // MeasureType is not an Array type in the AmoebaOptimizer / SingleValuedCostFunction.
+  // At many points in the code below, MeasureType is replaced with Array < double >
   typedef Superclass::MeasureType                 MeasureType, ArrayType;
   typedef Superclass::ParametersValueType         ValueType;
 
@@ -88,7 +92,7 @@ public:
 
   int m_ModelType;
 
-  LMCostFunction()
+  AmoebaCostFunction()
   {
   }
 
@@ -134,22 +138,24 @@ public:
 
   MeasureType GetValue( const ParametersType & parameters) const
   {
-    MeasureType measure(RangeDimension);
-    MeasureType measure2(RangeDimension);
-    MeasureType measure3(RangeDimension);
+	MeasureType final_cost = 0;
+	Array <double> measure(RangeDimension);
+	Array <double> measure2(RangeDimension);
+	Array <double> measure3(RangeDimension);
 
     ValueType Ktrans = parameters[0];
     ValueType Ve = parameters[1];
 
+	// Catch NaN values, replace with a random value to restart fitting. Unsure of
+	// robustness in different algorithms - a stopgap measure.
 	if (IS_NAN(Ktrans)){
 		Ktrans = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
 	}
 	if (IS_NAN(Ve)){
 		Ve = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
-		//std::cout << "Generated Ve: " << Ve << std::endl;
 	}
 
-    ArrayType VeTerm;
+    Array <double> VeTerm;
     VeTerm = -Ktrans / Ve*Time;
     ValueType deltaT = Time(1) - Time(0);
 
@@ -165,40 +171,45 @@ public:
       {
         ValueType f_pv = parameters[2];
         measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb));
+		for (unsigned int t = 1; t < RangeDimension; ++t)
+   		  {
+			  final_cost = final_cost + pow(measure[t], 2);
+		  }
       }
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
       
         // This is the original integration method.
-        // measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
+  //      measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
+		//for (unsigned int t = 1; t < RangeDimension; ++t)
+		//  {
+		//	  final_cost = final_cost + pow(measure[t], 2);
+		//  }
 
         // This is the new method.
         measure2[0] = 0;
         for (unsigned int t = 1; t < RangeDimension; ++t) 
           {
             measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
+			final_cost = final_cost + pow(Cv[t] - measure2[t], 2);
           }
-
-        // I fully understand that this is a strange way to subtract from observed.
-        for (unsigned int t = 1; t < RangeDimension; ++t) 
-          {
-            measure3[t] = Cv[t] - measure2[t];
-          }
-          
-        measure = measure3;
       }
-
-    return measure;
+    return final_cost;
   }
 
-  MeasureType GetFittedFunction(const ParametersType & parameters) const
+  // Note that type change from MeasureType to Array <double>. SingleValuedNonLinearOptimizer
+  // does not have array versions of MeasureType.
+  Array <double> GetFittedFunction(const ParametersType & parameters) const
   {
-    MeasureType measure(RangeDimension);
-    MeasureType measure2(RangeDimension);
+	 Array <double> measure(RangeDimension);
+	 Array <double> measure2(RangeDimension);
 
     ValueType Ktrans = parameters[0];
     ValueType Ve = parameters[1];
 
+	// Attempt to suppress NaN values and replace with random values. Not sure if this
+	// function is directly implicated in fitting, in which case these lines may be
+	// irrelevant.
 	if (IS_NAN(Ktrans)){
 		Ktrans = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
 	}
@@ -206,7 +217,7 @@ public:
 		Ve = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
 	}
 
-    ArrayType VeTerm;
+	Array <double> VeTerm;
     VeTerm = -Ktrans / Ve*Time;
     ValueType deltaT = Time(1) - Time(0);
 
@@ -222,13 +233,13 @@ public:
     if( m_ModelType == TOFTS_3_PARAMETER)
       {
         ValueType f_pv = parameters[2];
-        measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb);
+         measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)) + f_pv*Cb);
       }
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
 
         // Original Integration Method
-        // measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
+        //measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
           
         // New Integration Method
         measure2[0] = 0;
@@ -236,18 +247,19 @@ public:
           {
             measure2[t] = (measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
           }
-        measure = measure2;
+		measure = measure2;
       }
 
-	if (IS_NAN(Ktrans)){
+	// Check for NaN values..
+	//if (IS_NAN(Ktrans)){
 		//std::cout << "Generated Ktrans: " << Ktrans << std::endl;
 		//std::cout << "Generated Ve: " << Ve << std::endl;
-	}
+	//}
 
-    return measure;
+	return measure;
   }
 
-  //Not going to be used
+  //Not going to be used - we have no derivative for the Tofts model at present.
   void GetDerivative( const ParametersType & /* parameters*/,
                       DerivativeType  & /*derivative*/ ) const
   {
@@ -271,21 +283,21 @@ public:
   }
 
 protected:
-  virtual ~LMCostFunction(){}
+  virtual ~AmoebaCostFunction(){}
 private:
 
-  ArrayType Cv, Cb, Time;
+  Array <double> Cv, Cb, Time;
 
-  ArrayType Convolution(ArrayType X, ArrayType Y) const
+  Array <double> Convolution(Array <double> X, Array <double> Y) const
   {
-    ArrayType Z;
+	Array <double> Z;
     Z = vnl_convolve(X,Y).extract(X.size(),0);
     return Z;
   };
 
-  ArrayType Exponential(ArrayType X) const
+  Array <double> Exponential(Array <double> X) const
   {
-    ArrayType Z;
+	Array <double> Z;
     Z.set_size(X.size());
     for (unsigned int i=0; i<X.size(); i++)
       {
@@ -306,21 +318,21 @@ private:
 
 };
 
-class CommandIterationUpdateLevenbergMarquardt : public itk::Command
+class CommandIterationUpdateAmoeba : public itk::Command
 {
 public:
-  typedef  CommandIterationUpdateLevenbergMarquardt   Self;
+  typedef  CommandIterationUpdateAmoeba   Self;
   typedef  itk::Command                               Superclass;
   typedef itk::SmartPointer<Self>                     Pointer;
   itkNewMacro( Self );
 protected:
-  CommandIterationUpdateLevenbergMarquardt()
+  CommandIterationUpdateAmoeba()
   {
     m_IterationNumber=0;
   }
-  virtual ~CommandIterationUpdateLevenbergMarquardt(){}
+  virtual ~CommandIterationUpdateAmoeba(){}
 public:
-  typedef itk::LevenbergMarquardtOptimizer   OptimizerType;
+  typedef itk::AmoebaOptimizer   OptimizerType;
   typedef   const OptimizerType   *          OptimizerPointer;
 
   void Execute(itk::Object *caller, const itk::EventObject & event)
@@ -365,7 +377,7 @@ bool pk_solver(int signalSize,
                float epsilon = 1e-9f,
                int maxIter = 200,
                float hematocrit = 0.4f,
-               int modelType = itk::LMCostFunction::TOFTS_2_PARAMETER,
+               int modelType = itk::AmoebaCostFunction::TOFTS_2_PARAMETER,
                int constantBAT = 0,
                const std::string BATCalculationMode = "PeakGradient");
 
@@ -385,9 +397,9 @@ unsigned pk_solver(int signalSize,
                 float epsilon, 
                 int maxIter, 
                 float hematocrit,
-                itk::LevenbergMarquardtOptimizer* optimizer,
-                LMCostFunction* costFunction,
-                int modelType = itk::LMCostFunction::TOFTS_2_PARAMETER,
+                itk::AmoebaOptimizer* optimizer,
+                AmoebaCostFunction* costFunction,
+                int modelType = itk::AmoebaCostFunction::TOFTS_2_PARAMETER,
                 int constantBAT = 0,
                 const std::string BATCalculationMode = "PeakGradient");
 

@@ -16,7 +16,7 @@
 #include <itkGradientMagnitudeImageFilter.h>
 #include <itkImageRegionIterator.h>
 #include <itkLevenbergMarquardtOptimizer.h>
-// #include <itkAmoebaOptimizer.h>
+#include <itkAmoebaOptimizer.h>
 #include "PkSolver.h"
 #include "itkTimeProbesCollectorBase.h"
 #include <string>
@@ -58,28 +58,27 @@ bool pk_solver (int signalSize, const float* timeAxis,
   m_ConstantBAT = constantBAT;
 
   // Levenberg Marquardt optimizer
-  itk::LevenbergMarquardtOptimizer::Pointer  optimizer = itk::LevenbergMarquardtOptimizer::New();
+  //itk::LevenbergMarquardtOptimizer::Pointer  optimizer = itk::LevenbergMarquardtOptimizer::New();
 
   // Simplex optimizer
-  // itk::AmoebaOptimizer::Pointer  optimizer = itk::AmoebaOptimizer::New();
+  itk::AmoebaOptimizer::Pointer  optimizer = itk::AmoebaOptimizer::New();
 
-  LMCostFunction::Pointer costFunction = LMCostFunction::New();
+  AmoebaCostFunction::Pointer costFunction = AmoebaCostFunction::New();
 
-  LMCostFunction::ParametersType initialValue;
-  if(modelType == itk::LMCostFunction::TOFTS_2_PARAMETER)
+  AmoebaCostFunction::ParametersType initialValue;
+  if(modelType == itk::AmoebaCostFunction::TOFTS_2_PARAMETER)
     {
-    initialValue = LMCostFunction::ParametersType(2); ///...
+    initialValue = AmoebaCostFunction::ParametersType(2); ///...
     }
   else
     {
-    initialValue = LMCostFunction::ParametersType(3);
+    initialValue = AmoebaCostFunction::ParametersType(3);
     initialValue[2] = 0.1;     //f_pv //...
     }
   initialValue[0] = 0.1;     //Ktrans //...
   initialValue[1] = 0.5;     //ve //...
 
   costFunction->SetNumberOfValues (signalSize);
-
   costFunction->SetCb (BloodConcentrationCurve, signalSize); //BloodConcentrationCurve
   costFunction->SetCv (PixelConcentrationCurve, signalSize); //Signal Y
   costFunction->SetTime (timeAxis, signalSize); //Signal X
@@ -97,24 +96,30 @@ bool pk_solver (int signalSize, const float* timeAxis,
     return false;
   }
 
+  // L-M Optimizer is a vnl optimizer, and so can take more parameters than Simplex/Amoeba.
+
   // this following call is equivalent to invoke: costFunction->SetUseGradient( useGradient );
-  optimizer->UseCostFunctionGradientOff();
-  optimizer->SetUseCostFunctionGradient(0);
+  // optimizer->UseCostFunctionGradientOff();
+  // optimizer->SetUseCostFunctionGradient(0);
 
-  itk::LevenbergMarquardtOptimizer::InternalOptimizerType * vnlOptimizer = optimizer->GetOptimizer();
+  //itk::LevenbergMarquardtOptimizer::InternalOptimizerType * vnlOptimizer = optimizer->GetOptimizer();
 
-  vnlOptimizer->set_f_tolerance( fTol );
-  vnlOptimizer->set_g_tolerance( gTol );
-  vnlOptimizer->set_x_tolerance( xTol );
-  vnlOptimizer->set_epsilon_function( epsilon );
-  vnlOptimizer->set_max_function_evals( maxIter );
+  //vnlOptimizer->set_f_tolerance( fTol );
+  //vnlOptimizer->set_g_tolerance( gTol );
+  //vnlOptimizer->set_x_tolerance( xTol );
+  //vnlOptimizer->set_epsilon_function( epsilon );
+  //vnlOptimizer->set_max_function_evals( maxIter );
 
   // We start not so far from the solution
 
   optimizer->SetInitialPosition( initialValue );
+  // These options are for the Simplex Optimizer
+  //optimizer->SetMaximumNumberOfIterations(2000);
+  //optimizer->SetFunctionConvergenceTolerance(1e-10);
+  //optimizer->SetParametersConvergenceTolerance(1e-10);
 
-  CommandIterationUpdateLevenbergMarquardt::Pointer observer =
-    CommandIterationUpdateLevenbergMarquardt::New();
+  CommandIterationUpdateAmoeba::Pointer observer =
+    CommandIterationUpdateAmoeba::New();
   optimizer->AddObserver( itk::IterationEvent(), observer );
   optimizer->AddObserver( itk::FunctionEvaluationIterationEvent(), observer );
 
@@ -129,13 +134,13 @@ bool pk_solver (int signalSize, const float* timeAxis,
     return false;
   }
 
-  itk::LevenbergMarquardtOptimizer::ParametersType finalPosition;
+  itk::AmoebaOptimizer::ParametersType finalPosition;
   finalPosition = optimizer->GetCurrentPosition();
 
   //Solution: remove the scale of 100
   Ktrans = finalPosition[0];
   Ve = finalPosition[1];
-  if(modelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+  if(modelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
     {
     Fpv = finalPosition[2];
     }
@@ -152,8 +157,8 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
                float fTol, float gTol, float xTol,
                float epsilon, int maxIter,
                float hematocrit,
-               itk::LevenbergMarquardtOptimizer* optimizer,
-               LMCostFunction* costFunction,
+               itk::AmoebaOptimizer* optimizer,
+               AmoebaCostFunction* costFunction,
                int modelType,
                int constantBAT,
                const std::string BATCalculationMode
@@ -172,17 +177,15 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
   m_BATCalculationMode = BATCalculationMode;
   m_ConstantBAT = constantBAT;
 
-  // Levenberg Marquardt optimizer
-
   //////////////
-  LMCostFunction::ParametersType initialValue;
-  if(modelType == itk::LMCostFunction::TOFTS_2_PARAMETER)
+  AmoebaCostFunction::ParametersType initialValue;
+  if(modelType == itk::AmoebaCostFunction::TOFTS_2_PARAMETER)
     {
-    initialValue = LMCostFunction::ParametersType(2); ///...
+    initialValue = AmoebaCostFunction::ParametersType(2); ///...
     }
   else
     {
-    initialValue = LMCostFunction::ParametersType(3);
+    initialValue = AmoebaCostFunction::ParametersType(3);
     initialValue[2] = 0.1;     //f_pv //...
     }
   initialValue[0] = 0.1;     //Ktrans //...
@@ -198,7 +201,7 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
   costFunction->GetValue (initialValue); //...
   costFunction->SetModelType(modelType);
 
-  optimizer->UseCostFunctionGradientOff();
+  //optimizer->UseCostFunctionGradientOff();
 
   try {
      optimizer->SetCostFunction( costFunction );
@@ -210,13 +213,13 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
   return false;
   }
 
-  itk::LevenbergMarquardtOptimizer::InternalOptimizerType * vnlOptimizer = optimizer->GetOptimizer();//...
+  //itk::AmoebaOptimizer::InternalOptimizerType * vnlOptimizer = optimizer->GetOptimizer();//...
 
-  vnlOptimizer->set_f_tolerance( fTol ); //...
-  vnlOptimizer->set_g_tolerance( gTol ); //...
-  vnlOptimizer->set_x_tolerance( xTol ); //...
-  vnlOptimizer->set_epsilon_function( epsilon ); //...
-  vnlOptimizer->set_max_function_evals( maxIter ); //...
+  //vnlOptimizer->set_f_tolerance( fTol ); //...
+  //vnlOptimizer->set_g_tolerance( gTol ); //...
+  //vnlOptimizer->set_x_tolerance( xTol ); //...
+  //vnlOptimizer->set_epsilon_function( epsilon ); //...
+  //vnlOptimizer->set_max_function_evals( maxIter ); //...
 
   // We start not so far from the solution
 
@@ -236,7 +239,7 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
   }
   //vnlOptimizer->diagnose_outcome();
   //std::cerr << "after optimizer!" << std::endl;
-  itk::LevenbergMarquardtOptimizer::ParametersType finalPosition;
+  itk::AmoebaOptimizer::ParametersType finalPosition;
   finalPosition = optimizer->GetCurrentPosition();
   //std::cerr << finalPosition[0] << ", " << finalPosition[1] << ", " << finalPosition[2] << std::endl;
 
@@ -244,7 +247,7 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
   //Solution: remove the scale of 100
   Ktrans = finalPosition[0];
   Ve = finalPosition[1];
-  if(modelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+  if(modelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
     {
     Fpv = finalPosition[2];
     }

@@ -432,11 +432,11 @@ int DoIt( int argc, char * argv[], const T1 &, const T2 &)
 
   if(ComputeFpv)
     {
-    quantifier->SetModelType(itk::LMCostFunction::TOFTS_3_PARAMETER);
+    quantifier->SetModelType(itk::AmoebaCostFunction::TOFTS_3_PARAMETER);
     }
   else
     {
-    quantifier->SetModelType(itk::LMCostFunction::TOFTS_2_PARAMETER);
+    quantifier->SetModelType(itk::AmoebaCostFunction::TOFTS_2_PARAMETER);
     }
   quantifier->SetMaskByRSquared(OutputRSquaredFileName.empty());
 
