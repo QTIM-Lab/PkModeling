@@ -7,7 +7,7 @@
   <version>0.1.0.$Revision: 19276 $(alpha)</version>
   <documentation-url>http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Modules/PkModeling</documentation-url>
   <license/>
-  <contributor>Yingxuan Zhu (while at GE), Andrey Fedorov (SPL), John Evans (MGH), Jim Miller (GE)</contributor>
+  <contributor>Yingxuan Zhu (while at GE), Andrey Fedorov (SPL), John Evans (MGH), Jim Miller (GE), Andrew Beers (MGH)</contributor>
   <acknowledgements><![CDATA[This work is part of the National Alliance for Medical Image Computing (NA-MIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, and by National Cancer Institute as part of the Quantitative Imaging Network initiative (U01CA151261) and QIICR (U24CA180918).]]></acknowledgements>
   <parameters>
     <label>PkModeling Parameters</label>
@@ -18,7 +18,7 @@
       <longflag>T1Blood</longflag>
       <label>T1 Blood Value</label>
       <channel>input</channel>
-      <default>1600</default>
+      <default>1440</default>
     </float>
     <float>
       <name>T1PreTissueValue</name>
@@ -26,7 +26,7 @@
       <longflag>T1Tissue</longflag>
       <label>T1 Tissue Value</label>
       <channel>input</channel>
-      <default>1597</default>
+      <default>1000</default>
     </float>
     <float>
       <name>RelaxivityValue</name>
@@ -34,7 +34,7 @@
       <longflag>relaxivity</longflag>
       <label>Relaxivity Value</label>
       <channel>input</channel>
-      <default>0.0039</default>
+      <default>0.0045</default>
     </float>
     <float hidden="true">
       <name>S0GradValue</name>
@@ -90,7 +90,7 @@
       <longflag>hematocrit</longflag>
       <label>Hematocrit Value</label>
       <channel>input</channel>
-      <default>0.4</default>
+      <default>0.45</default>
     </float>
     <float>
       <name>AUCTimeInterval</name>
@@ -204,13 +204,22 @@
       <element>PeakGradient</element>
       <element>UseConstantBAT</element>
     </string-enumeration>
+    <string-enumeration>
+      <name>ToftsIntegrationMethod</name>
+      <longflag>ToftsIntegrationMethod</longflag>
+      <label>Fitting Integration Method</label>
+      <description>Determine which integration method will be used when calculating Mean Squared Error in the fitting process.</description>
+      <default>Recursive</default>
+      <element>Recursive</element>
+      <element>Convolutional</element>
+    </string-enumeration>
     <integer>
       <name>ConstantBAT</name>
       <description><![CDATA[Constant Bolus Arrival Time index(frame number).]]></description>
       <longflag>constantBAT</longflag>
       <label>Constant BAT</label>
       <channel>input</channel>
-      <default>1</default>
+      <default>10</default>
     </integer>
     <image>
       <name>OutputRSquaredFileName</name>

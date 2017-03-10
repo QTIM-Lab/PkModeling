@@ -30,6 +30,7 @@ static itk::TimeProbesCollectorBase probe;
 
 int m_ConstantBAT;
 std::string m_BATCalculationMode;
+std::string m_ToftsIntegrationMethod;
 
 //
 // Implementation of the PkSolver API
@@ -39,6 +40,7 @@ std::string m_BATCalculationMode;
 bool pk_solver (int signalSize, const float* timeAxis,
                 const float* PixelConcentrationCurve,
                 const float* BloodConcentrationCurve,
+				const std::string ToftsIntegrationMethod,
                 float& Ktrans, float& Ve, float& Fpv,
                 float fTol, float gTol, float xTol,
                 float epsilon, int maxIter,
@@ -55,6 +57,7 @@ bool pk_solver (int signalSize, const float* timeAxis,
   // maxIter   =   200;  // Maximum number of iterations
 
   m_BATCalculationMode = BATCalculationMode;
+  m_ToftsIntegrationMethod = ToftsIntegrationMethod;
   m_ConstantBAT = constantBAT;
 
   // Levenberg Marquardt optimizer
@@ -85,6 +88,7 @@ bool pk_solver (int signalSize, const float* timeAxis,
   costFunction->SetHematocrit (hematocrit);
   costFunction->GetValue (initialValue);
   costFunction->SetModelType(modelType);
+  costFunction->SetIntegrationType(ToftsIntegrationMethod);
 
   try {
     optimizer->SetCostFunction( costFunction.GetPointer() );
@@ -153,6 +157,7 @@ bool pk_solver (int signalSize, const float* timeAxis,
 unsigned pk_solver(int signalSize, const float* timeAxis,
                const float* PixelConcentrationCurve,
                const float* BloodConcentrationCurve,
+			   const std::string ToftsIntegrationMethod,
                float& Ktrans, float& Ve, float& Fpv,
                float fTol, float gTol, float xTol,
                float epsilon, int maxIter,
@@ -176,6 +181,7 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
 
   m_BATCalculationMode = BATCalculationMode;
   m_ConstantBAT = constantBAT;
+  m_ToftsIntegrationMethod = ToftsIntegrationMethod;
 
   //////////////
   AmoebaCostFunction::ParametersType initialValue;
@@ -200,6 +206,7 @@ unsigned pk_solver(int signalSize, const float* timeAxis,
   costFunction->SetHematocrit (hematocrit);
   costFunction->GetValue (initialValue); //...
   costFunction->SetModelType(modelType);
+  costFunction->SetIntegrationType(ToftsIntegrationMethod);
 
   //optimizer->UseCostFunctionGradientOff();
 

@@ -438,7 +438,7 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
         {
         optimizerErrorCode = pk_solver(timeSize, &timeMinute[0],
           	const_cast<float *>(shiftedVectorVoxel.GetDataPointer() ),
-          	&m_AIF[0],
+          	&m_AIF[0], m_ToftsIntegrationMethod,
           	tempKtrans, tempVe, tempFpv,
           	m_fTol,m_gTol,m_xTol,
           	m_epsilon,m_maxIter, m_hematocrit,

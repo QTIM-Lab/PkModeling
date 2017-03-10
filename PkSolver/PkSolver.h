@@ -89,7 +89,7 @@ public:
   typedef Superclass::ParametersValueType         ValueType;
 
   float m_Hematocrit;
-
+  std::string m_IntegrationType;
   int m_ModelType;
 
   AmoebaCostFunction()
@@ -104,6 +104,10 @@ public:
 
   void SetModelType (int model) {
     m_ModelType = model;
+  }
+
+  void SetIntegrationType(std::string ToftsIntegrationMethod){
+	  m_IntegrationType = ToftsIntegrationMethod;
   }
 
   void SetNumberOfValues(unsigned int NumberOfValues)
@@ -176,24 +180,30 @@ public:
 			  final_cost = final_cost + pow(measure[t], 2);
 		  }
       }
-    else if(m_ModelType == TOFTS_2_PARAMETER)
-      {
-      
-        // This is the original integration method.
-  //      measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
-		//for (unsigned int t = 1; t < RangeDimension; ++t)
-		//  {
-		//	  final_cost = final_cost + pow(measure[t], 2);
-		//  }
+	else if (m_ModelType == TOFTS_2_PARAMETER)
+	{
 
-        // This is the new method.
-        measure2[0] = 0;
-        for (unsigned int t = 1; t < RangeDimension; ++t) 
-          {
-            measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
-			final_cost = final_cost + pow(Cv[t] - measure2[t], 2);
-          }
-      }
+		if (m_IntegrationType == "Convolutional")
+		{
+			std::cout << "Convolution method!" << Ktrans << std::endl;
+			measure = Cv - (1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm))));
+			for (unsigned int t = 1; t < RangeDimension; ++t)
+			{
+				final_cost = final_cost + pow(measure[t], 2);
+			}
+		}
+
+		else if (m_IntegrationType == "Recursive")
+		{
+			std::cout << "Recursive method!" << Ktrans << std::endl;
+			measure2[0] = 0;
+			for (unsigned int t = 1; t < RangeDimension; ++t)
+			{
+				measure2[t] = measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B);
+				final_cost = final_cost + pow(Cv[t] - measure2[t], 2);
+			}
+		}
+    }
     return final_cost;
   }
 
@@ -229,7 +239,6 @@ public:
     ValueType block_B = capital_E - (capital_E * log_e) - 1;
     ValueType block_ktrans = Ktrans * deltaT / log_e_2;
 
-
     if( m_ModelType == TOFTS_3_PARAMETER)
       {
         ValueType f_pv = parameters[2];
@@ -238,16 +247,20 @@ public:
     else if(m_ModelType == TOFTS_2_PARAMETER)
       {
 
-        // Original Integration Method
-        //measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
-          
+		  if (m_IntegrationType == "Convolutional")
+		  {
+			  measure = 1/(1.0-m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb,Exponential(VeTerm)));
+		  }
         // New Integration Method
-        measure2[0] = 0;
-        for (unsigned int t = 1; t < RangeDimension; ++t) 
-          {
-            measure2[t] = (measure2[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
-          }
-		measure = measure2;
+		  else if (m_IntegrationType == "Recursive")
+		  {
+			  measure[0] = 0;
+			  for (unsigned int t = 1; t < RangeDimension; ++t)
+			  {
+				  measure[t] = (measure[t - 1] * capital_E + (1 / (1.0 - m_Hematocrit)) * block_ktrans * (Cb[t] * block_A - Cb[t - 1] * block_B));
+			  }
+		  }
+
       }
 
 	// Check for NaN values..
@@ -368,6 +381,7 @@ bool pk_solver(int signalSize,
                const float* timeAxis,
                const float* PixelConcentrationCurve,
                const float* BloodConcentrationCurve,
+			   const std::string ToftsIntegrationMethod,
                float& Ktrans, 
                float& Ve, 
                float& Fpv,
@@ -388,6 +402,7 @@ unsigned pk_solver(int signalSize,
                 const float* timeAxis,
                 const float* PixelConcentrationCurve, 
                 const float* BloodConcentrationCurve,
+				const std::string ToftsIntegrationMethod,
                 float& Ktrans,
                 float& Ve, 
                 float& Fpv,
