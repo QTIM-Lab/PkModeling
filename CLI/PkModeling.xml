@@ -213,6 +213,15 @@
       <element>Recursive</element>
       <element>Convolutional</element>
     </string-enumeration>
+    <string-enumeration>
+      <name>FittingMethod</name>
+      <longflag>FittingMethod</longflag>
+      <label>Fitting Algorithm</label>
+      <description>Determine which fitting algorithm will be used for predicting parametric values.</description>
+      <default>Simplex Algorithm</default>
+      <element>Simplex Algorithm</element>
+      <element>Levenberg-Marquardt Algorithm</element>
+    </string-enumeration>    
     <integer>
       <name>ConstantBAT</name>
       <description><![CDATA[Constant Bolus Arrival Time index(frame number).]]></description>

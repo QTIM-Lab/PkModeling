@@ -105,6 +105,8 @@ public:
   itkSetMacro( S0GradThresh, float);
   itkGetMacro( BATCalculationMode, std::string);
   itkSetMacro( BATCalculationMode, std::string);
+  itkGetMacro( FittingMethod, std::string);
+  itkSetMacro( FittingMethod, std::string);
   itkGetMacro( ToftsIntegrationMethod, std::string);
   itkSetMacro( ToftsIntegrationMethod, std::string);
   itkGetMacro( constantBAT, int);
@@ -176,6 +178,7 @@ private:
   float m_S0GradThresh;
   std::string m_BATCalculationMode;
   std::string m_ToftsIntegrationMethod;
+  std::string m_FittingMethod;
   int m_constantBAT;
 };
 

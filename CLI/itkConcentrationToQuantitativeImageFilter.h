@@ -30,7 +30,7 @@ namespace itk
  *
  * An second input, specifying the location of the arterial input
  * function, allows for the calculation to be adjusted for blood
- * verses tissue.
+ * versus tissue.
  *
  * \note
  * This work is part of the National Alliance for Medical Image Computing
@@ -137,6 +137,8 @@ public:
   itkSetMacro( BATCalculationMode, std::string);
   itkGetMacro( ToftsIntegrationMethod, std::string);
   itkSetMacro( ToftsIntegrationMethod, std::string);
+  itkGetMacro( FittingMethod, std::string);
+  itkSetMacro( FittingMethod, std::string);
 
   void SetTiming(const std::vector<float>& inputTiming);
   const std::vector<float>& GetTiming();
@@ -246,6 +248,7 @@ private:
   int m_constantBAT;
   std::string m_BATCalculationMode;
   std::string m_ToftsIntegrationMethod;
+  std::string m_FittingMethod;
 
   std::vector<float> m_Timing;
 
