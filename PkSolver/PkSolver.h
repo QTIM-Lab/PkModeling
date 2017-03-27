@@ -90,34 +90,9 @@ namespace itk
       m_IntegrationType = ToftsIntegrationMethod;
     }
 
-    void SetNumberOfValues(unsigned int NumberOfValues)
-    {
-      RangeDimension = NumberOfValues;
-    }
-
     unsigned int GetNumberOfValues(void) const
     {
       return RangeDimension;
-    }
-
-    void SetCb(const float* cb, int sz) //BloodConcentrationCurve.
-    {
-    }
-
-    void SetCv(const float* cv, int sz) //Self signal Y
-    {
-    }
-
-    void SetTime(const float* cx, int sz) //Self signal X
-    {
-    }
-
-    void GetValue(const ParametersType & parameters){
-
-    }
-
-    Array <double> GetFittedFunction(const ParametersType & parameters) const{
-
     }
 
 #define IS_NAN(x) ((x) != (x))
@@ -127,20 +102,7 @@ namespace itk
 
   };
 
-  class PkModelingOptimizer : public itk::NonLinearOptimizer {
-  public:
-
-    void SetCostFunction(itk::PkModelingCostFunction *){
-
-    }
-
-    vnl_amoeba GetOptimizer(){
-  
-    }
-
-  };
-
-  class AmoebaCostFunction : public itk::SingleValuedCostFunction, public PkModelingCostFunction
+  class AmoebaCostFunction : public itk::SingleValuedCostFunction
   {
   public:
     typedef AmoebaCostFunction                    Self;
@@ -157,8 +119,38 @@ namespace itk
     typedef Superclass::MeasureType                 MeasureType, ArrayType;
     typedef Superclass::ParametersValueType         ValueType;
 
+    enum { SpaceDimension = 2 };
+    unsigned int RangeDimension;
+    enum ModelType { TOFTS_2_PARAMETER = 1, TOFTS_3_PARAMETER };
+    float m_Hematocrit;
+    std::string m_IntegrationType;
+    int m_ModelType;
+    #define IS_NAN(x) ((x) != (x))
+
     AmoebaCostFunction()
     {
+    }
+
+    void SetHematocrit(float hematocrit) {
+      m_Hematocrit = hematocrit;
+    }
+
+    void SetModelType(int model) {
+      m_ModelType = model;
+    }
+
+    void SetIntegrationType(std::string ToftsIntegrationMethod){
+      m_IntegrationType = ToftsIntegrationMethod;
+    }
+
+    unsigned int GetNumberOfValues(void) const
+    {
+      return RangeDimension;
+    }
+
+    void SetNumberOfValues(unsigned int NumberOfValues)
+    {
+      RangeDimension = NumberOfValues;
     }
 
     void SetCb(const float* cb, int sz) //BloodConcentrationCurve.
@@ -378,6 +370,11 @@ namespace itk
     {
     }
 
+    void SetNumberOfValues(unsigned int NumberOfValues)
+    {
+      RangeDimension = NumberOfValues;
+    }
+
     unsigned int GetNumberOfValues(void) const
     {
       return RangeDimension;
@@ -577,6 +574,39 @@ namespace itk
 
   };
 
+
+  class PkModelingOptimizer  {
+  public:
+
+    void SetCostFunction(itk::PkModelingCostFunction *){
+
+    }
+
+    itk::AmoebaOptimizer::Pointer  amoeba_optimizer = itk::AmoebaOptimizer::New();
+    itk::AmoebaCostFunction::Pointer amoeba_costFunction = itk::AmoebaCostFunction::New();
+    itk::LevenbergMarquardtOptimizer::Pointer  LM_optimizer = itk::LevenbergMarquardtOptimizer::New();
+    itk::LMCostFunction::Pointer LM_costFunction = itk::LMCostFunction::New();
+
+    Array <double> Get_Fitting_Measure(const std::string FittingMethod, itk::PkModelingCostFunction::ParametersType param){
+      if (FittingMethod == "Simplex Algorithm"){
+        return amoeba_costFunction->GetFittedFunction(param);
+      }
+      else{
+        return LM_costFunction->GetFittedFunction(param);
+      }
+    }
+
+    double Get_Fitting_rms(const std::string FittingMethod){
+      if (FittingMethod == "Simplex Algorithm"){
+        return amoeba_optimizer->GetOptimizer()->get_end_error();
+      }
+      else{
+        return LM_optimizer->GetOptimizer()->get_end_error();
+      }
+    }
+
+  };
+
   class CommandIterationUpdateAmoeba : public itk::Command
   {
   public:
@@ -708,7 +738,6 @@ namespace itk
     float hematocrit,
     const std::string FittingMethod,
     itk::PkModelingOptimizer* optimizer,
-    itk::PkModelingCostFunction* costFunction,
     int modelType = itk::PkModelingCostFunction::TOFTS_2_PARAMETER,
     int constantBAT = 0,
     const std::string BATCalculationMode = "PeakGradient");

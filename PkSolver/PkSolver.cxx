@@ -57,6 +57,9 @@ namespace itk
     // epsilon   =  1e-9;    // Step
     // maxIter   =   200;  // Maximum number of iterations
 
+
+    std::cout << "Bool function also called..." << std::endl;
+
     m_BATCalculationMode = BATCalculationMode;
     m_ToftsIntegrationMethod = ToftsIntegrationMethod;
     m_FittingMethod = FittingMethod;
@@ -119,7 +122,7 @@ namespace itk
         return false;
       }
 
-      itk::PkModelingOptimizer::ParametersType finalPosition;
+      itk::AmoebaOptimizer::ParametersType finalPosition;
 
       finalPosition = optimizer->GetCurrentPosition();
 
@@ -235,7 +238,6 @@ namespace itk
     float hematocrit,
     const std::string FittingMethod,
     itk::PkModelingOptimizer* optimizer,
-    itk::PkModelingCostFunction* costFunction,
     int modelType,
     int constantBAT,
     const std::string BATCalculationMode
@@ -258,10 +260,157 @@ namespace itk
 
     //////////////
 
-    //if (m_FittingMethod == "Simplex Algorithm"){
+    std::cout << "PkSolver entered.." << std::endl;
 
-      //itk::AmoebaOptimizer::Pointer  optimizer = itk::AmoebaOptimizer::New();
-      //AmoebaCostFunction::Pointer costFunction = AmoebaCostFunction::New();
+    if (m_FittingMethod == "Simplex Algorithm"){
+
+      std::cout << "Simplex Entered.." << std::endl;
+      itk::AmoebaCostFunction::ParametersType initialValue;
+      if (modelType == itk::AmoebaCostFunction::TOFTS_2_PARAMETER)
+      {
+        initialValue = itk::AmoebaCostFunction::ParametersType(2); ///...
+      }
+      else
+      {
+        initialValue = itk::AmoebaCostFunction::ParametersType(3);
+        initialValue[2] = 0.1;     //f_pv //...
+      }
+      initialValue[0] = 0.1;     //Ktrans //...
+      initialValue[1] = 0.5;     //ve //...
+
+      std::cout << "Inital values set with PkModelingCostFunction.." << initialValue << std::endl;
+
+      optimizer->amoeba_costFunction->SetCb(BloodConcentrationCurve, signalSize); //BloodConcentrationCurve
+      std::cout << "cb" << std::endl;
+      optimizer->amoeba_costFunction->SetNumberOfValues(signalSize);
+      std::cout << "numvals" << std::endl;
+      optimizer->amoeba_costFunction->SetCb(BloodConcentrationCurve, signalSize); //BloodConcentrationCurve
+      std::cout << "cb" << std::endl;
+      optimizer->amoeba_costFunction->SetCv(PixelConcentrationCurve, signalSize); //Signal Y
+      std::cout << "cv" << std::endl;
+      optimizer->amoeba_costFunction->SetTime(timeAxis, signalSize); //Signal X
+      std::cout << "time" << std::endl;
+      optimizer->amoeba_costFunction->SetHematocrit(hematocrit);
+      std::cout << "hematocrit" << std::endl;
+      optimizer->amoeba_costFunction->GetValue(initialValue); //...
+      std::cout << "initialValue" << std::endl;
+      optimizer->amoeba_costFunction->SetModelType(modelType);
+      std::cout << "modelType" << std::endl;
+      optimizer->amoeba_costFunction->SetIntegrationType(ToftsIntegrationMethod);
+      std::cout << "integrationtype" << std::endl;
+      //optimizer->UseCostFunctionGradientOff();
+
+      std::cout << "Amoeba Cost function methods set.." << std::endl;
+
+      try {
+        optimizer->amoeba_optimizer->SetCostFunction(optimizer->amoeba_costFunction);
+      }
+      catch (itk::ExceptionObject & e) {
+        std::cout << "Exception thrown ! " << std::endl;
+        std::cout << "An error ocurred during Optimization" << std::endl;
+        std::cout << e << std::endl;
+        return false;
+      }
+
+
+      std::cout << "Exception check passed.." << std::endl;
+
+      //itk::AmoebaOptimizer::InternalOptimizerType * vnlOptimizer = optimizer->GetOptimizer();//...
+
+      //vnlOptimizer->set_f_tolerance( fTol ); //...
+      //vnlOptimizer->set_g_tolerance( gTol ); //...
+      //vnlOptimizer->set_x_tolerance( xTol ); //...
+      //vnlOptimizer->set_epsilon_function( epsilon ); //...
+      //vnlOptimizer->set_max_function_evals( maxIter ); //...
+
+      // We start not so far from the solution
+
+      optimizer->amoeba_optimizer->SetInitialPosition(initialValue); //...
+
+      CommandIterationUpdateAmoeba::Pointer observer =
+        CommandIterationUpdateAmoeba::New();
+
+
+      std::cout << "Command iteration update passed.." << std::endl;
+
+      optimizer->amoeba_optimizer->AddObserver(itk::IterationEvent(), observer);
+      optimizer->amoeba_optimizer->AddObserver(itk::FunctionEvaluationIterationEvent(), observer);
+
+
+      std::cout << "Observer added.." << std::endl;
+
+      try {
+        //  probe.Start("optimizer");
+        optimizer->amoeba_optimizer->StartOptimization();
+        //   probe.Stop("optimizer");
+      }
+      catch (itk::ExceptionObject & e) {
+        std::cerr << "Exception thrown ! " << std::endl;
+        std::cerr << "An error ocurred during Optimization" << std::endl;
+        std::cerr << "Location    = " << e.GetLocation() << std::endl;
+        std::cerr << "Description = " << e.GetDescription() << std::endl;
+        return false;
+      }
+
+
+      std::cout << "Exception test 2 passed.." << std::endl;
+      //vnlOptimizer->diagnose_outcome();
+      //std::cerr << "after optimizer!" << std::endl;
+      itk::AmoebaOptimizer::ParametersType finalPosition;
+      finalPosition = optimizer->amoeba_optimizer->GetCurrentPosition();
+      //std::cerr << finalPosition[0] << ", " << finalPosition[1] << ", " << finalPosition[2] << std::endl;
+
+
+      std::cout << "Final position retrieved.." << std::endl;
+      //Solution: remove the scale of 100
+      Ktrans = finalPosition[0];
+      Ve = finalPosition[1];
+      if (modelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
+      {
+        Fpv = finalPosition[2];
+      }
+
+
+      std::cout << "FinalPosition set.." << std::endl;
+      std::string diagnosticsCode = optimizer->amoeba_optimizer->GetStopConditionDescription();
+      unsigned errorCode;
+      for (errorCode = 0; errorCode < NumOptimizerDiagnosticCodes; errorCode++){
+        if (diagnosticsCode.find(OptimizerDiagnosticStrings[errorCode]) != std::string::npos)
+          break;
+      }
+
+
+      std::cout << "Diagnostic code.." << std::endl;
+
+      // "Project" back onto the feasible set.  Should really be done as a
+      // constraint in the optimization.
+      if (Ve < 0){
+        Ve = 0;
+        errorCode |= VE_CLAMPED;
+      }
+      if (Ve > 1){
+        Ve = 1;
+        errorCode |= VE_CLAMPED;
+      }
+      if (Ktrans < 0){
+        Ktrans = 0;
+        errorCode |= KTRANS_CLAMPED;
+      }
+      if (Ktrans > 5){
+        Ktrans = 5;
+        errorCode |= KTRANS_CLAMPED;
+      }
+
+      std::cout << "Clamped.." << std::endl;
+
+      //if((Fpv>1)||(Fpv<0)) Fpv = 0;
+      //  probe.Stop("pk_solver");
+      return errorCode;
+
+    }
+
+    else {
+
       PkModelingCostFunction::ParametersType initialValue;
       if (modelType == itk::PkModelingCostFunction::TOFTS_2_PARAMETER)
       {
@@ -275,19 +424,19 @@ namespace itk
       initialValue[0] = 0.1;     //Ktrans //...
       initialValue[1] = 0.5;     //ve //...
 
-      costFunction->SetNumberOfValues(signalSize);
-      costFunction->SetCb(BloodConcentrationCurve, signalSize); //BloodConcentrationCurve
-      costFunction->SetCv(PixelConcentrationCurve, signalSize); //Signal Y
-      costFunction->SetTime(timeAxis, signalSize); //Signal X
-      costFunction->SetHematocrit(hematocrit);
-      costFunction->GetValue(initialValue); //...
-      costFunction->SetModelType(modelType);
-      costFunction->SetIntegrationType(ToftsIntegrationMethod);
+      optimizer->LM_costFunction->SetNumberOfValues(signalSize);
+      optimizer->LM_costFunction->SetCb(BloodConcentrationCurve, signalSize); //BloodConcentrationCurve
+      optimizer->LM_costFunction->SetCv(PixelConcentrationCurve, signalSize); //Signal Y
+      optimizer->LM_costFunction->SetTime(timeAxis, signalSize); //Signal X
+      optimizer->LM_costFunction->SetHematocrit(hematocrit);
+      optimizer->LM_costFunction->GetValue(initialValue); //...
+      optimizer->LM_costFunction->SetModelType(modelType);
+      optimizer->LM_costFunction->SetIntegrationType(ToftsIntegrationMethod);
 
       //optimizer->UseCostFunctionGradientOff();
 
       try {
-        optimizer->SetCostFunction(costFunction);
+        optimizer->LM_optimizer->SetCostFunction(optimizer->LM_costFunction);
       }
       catch (itk::ExceptionObject & e) {
         std::cout << "Exception thrown ! " << std::endl;
@@ -296,27 +445,27 @@ namespace itk
         return false;
       }
 
-      //itk::AmoebaOptimizer::InternalOptimizerType * vnlOptimizer = optimizer->GetOptimizer();//...
+      itk::LevenbergMarquardtOptimizer::InternalOptimizerType * vnlOptimizer = optimizer->LM_optimizer->GetOptimizer();//...
 
-      //vnlOptimizer->set_f_tolerance( fTol ); //...
-      //vnlOptimizer->set_g_tolerance( gTol ); //...
-      //vnlOptimizer->set_x_tolerance( xTol ); //...
-      //vnlOptimizer->set_epsilon_function( epsilon ); //...
-      //vnlOptimizer->set_max_function_evals( maxIter ); //...
+      vnlOptimizer->set_f_tolerance( fTol ); //...
+      vnlOptimizer->set_g_tolerance( gTol ); //...
+      vnlOptimizer->set_x_tolerance( xTol ); //...
+      vnlOptimizer->set_epsilon_function( epsilon ); //...
+      vnlOptimizer->set_max_function_evals( maxIter ); //...
 
       // We start not so far from the solution
 
-      optimizer->SetInitialPosition(initialValue); //...
+      optimizer->LM_optimizer->SetInitialPosition(initialValue); //...
 
-      CommandIterationUpdateAmoeba::Pointer observer =
-        CommandIterationUpdateAmoeba::New();
+      CommandIterationUpdateLevenbergMarquardt::Pointer observer =
+        CommandIterationUpdateLevenbergMarquardt::New();
 
-      optimizer->AddObserver(itk::IterationEvent(), observer);
-      optimizer->AddObserver(itk::FunctionEvaluationIterationEvent(), observer);
+      optimizer->LM_optimizer->AddObserver(itk::IterationEvent(), observer);
+      optimizer->LM_optimizer->AddObserver(itk::FunctionEvaluationIterationEvent(), observer);
 
       try {
         //  probe.Start("optimizer");
-        optimizer->StartOptimization();
+        optimizer->LM_optimizer->StartOptimization();
         //   probe.Stop("optimizer");
       }
       catch (itk::ExceptionObject & e) {
@@ -329,7 +478,7 @@ namespace itk
       //vnlOptimizer->diagnose_outcome();
       //std::cerr << "after optimizer!" << std::endl;
       itk::LevenbergMarquardtOptimizer::ParametersType finalPosition;
-      finalPosition = optimizer->GetCurrentPosition();
+      finalPosition = optimizer->LM_optimizer->GetCurrentPosition();
       //std::cerr << finalPosition[0] << ", " << finalPosition[1] << ", " << finalPosition[2] << std::endl;
 
 
@@ -342,7 +491,7 @@ namespace itk
       }
 
 
-      std::string diagnosticsCode = optimizer->GetStopConditionDescription();
+      std::string diagnosticsCode = optimizer->LM_optimizer->GetStopConditionDescription();
       unsigned errorCode;
       for (errorCode = 0; errorCode < NumOptimizerDiagnosticCodes; errorCode++){
         if (diagnosticsCode.find(OptimizerDiagnosticStrings[errorCode]) != std::string::npos)
@@ -371,7 +520,8 @@ namespace itk
       //if((Fpv>1)||(Fpv<0)) Fpv = 0;
       //  probe.Stop("pk_solver");
       return errorCode;
-   
+
+    }
 
     //if (m_FittingMethod == "Levenberg-Marquardt Algorithm"){
 

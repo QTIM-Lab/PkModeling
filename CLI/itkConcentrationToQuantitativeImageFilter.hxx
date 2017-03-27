@@ -433,25 +433,16 @@ namespace itk
         std::cout << "About to check for success... " << std::endl;
         if (success)
         {
-
-          itk::PkModelingOptimizer::Pointer optimizer = NULL;
-          PkModelingCostFunction* costFunction = NULL;
-          if (m_FittingMethod == "Simplex Algorithm"){
-            optimizer = AmoebaOptimizer::New();
-            costFunction = AmoebaCostFunction::New();
-          }
-          if (m_FittingMethod == "Levenberg-Marquardt Algorithm"){
-            optimizer = LevenbergMarquardtOptimizer::New();
-            costFunction = LMCostFunction::New();
-          }
-
+           std::cout << "Initial Success Code passed... " << std::endl;
+           itk::PkModelingOptimizer* optimizer;
+           std::cout << "Optimizer initialized.." << std::endl;
             optimizerErrorCode = pk_solver(timeSize, &timeMinute[0],
               const_cast<float *>(shiftedVectorVoxel.GetDataPointer()),
               &m_AIF[0], m_ToftsIntegrationMethod,
               tempKtrans, tempVe, tempFpv,
               m_fTol, m_gTol, m_xTol,
               m_epsilon, m_maxIter, m_hematocrit,
-              m_FittingMethod, optimizer, costFunction, m_ModelType, m_constantBAT, m_BATCalculationMode);
+              m_FittingMethod, optimizer, m_ModelType, m_constantBAT, m_BATCalculationMode);
 
             int timeSize = (int)inputVectorVolume->GetNumberOfComponentsPerPixel();
             std::cout << "Got the error code... " << std::endl;
@@ -466,8 +457,8 @@ namespace itk
             std::cout << "Set up the optimizer... " << std::endl;
             // Amoeba optimizer does not have an Array version of Measure type,
             // so I manually specify Array here.
-            Array < double > measure =
-              costFunction->GetFittedFunction(param);
+
+            Array < double > measure = optimizer->Get_Fitting_Measure(m_FittingMethod, param);
             std::cout << "Got the fitted function... " << std::endl;
             for (size_t i = 0; i < fittedVectorVoxel.GetSize(); i++)
             {
@@ -502,7 +493,7 @@ namespace itk
             // fitting nonlinear functions.
 
             // SSerr we can get easily from the optimizer
-            double rms = optimizer->GetOptimizer()->get_end_error();
+            double rms = optimizer->Get_Fitting_rms(m_FittingMethod);
             double SSerr = rms*rms*shiftedVectorVoxel.GetSize();
 
             // if we couldn't get rms from the optimizer, we would calculate SSerr ourselves
