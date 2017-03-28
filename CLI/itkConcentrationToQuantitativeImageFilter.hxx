@@ -434,7 +434,7 @@ namespace itk
         if (success)
         {
            std::cout << "Initial Success Code passed... " << std::endl;
-           itk::PkModelingOptimizer* optimizer;
+           itk::PkModelingOptimizer optimizer;
            std::cout << "Optimizer initialized.." << std::endl;
             optimizerErrorCode = pk_solver(timeSize, &timeMinute[0],
               const_cast<float *>(shiftedVectorVoxel.GetDataPointer()),
@@ -458,7 +458,7 @@ namespace itk
             // Amoeba optimizer does not have an Array version of Measure type,
             // so I manually specify Array here.
 
-            Array < double > measure = optimizer->Get_Fitting_Measure(m_FittingMethod, param);
+            Array < double > measure = optimizer.Get_Fitting_Measure(m_FittingMethod, param);
             std::cout << "Got the fitted function... " << std::endl;
             for (size_t i = 0; i < fittedVectorVoxel.GetSize(); i++)
             {
@@ -493,7 +493,7 @@ namespace itk
             // fitting nonlinear functions.
 
             // SSerr we can get easily from the optimizer
-            double rms = optimizer->Get_Fitting_rms(m_FittingMethod);
+            double rms = optimizer.Get_Fitting_rms(m_FittingMethod);
             double SSerr = rms*rms*shiftedVectorVoxel.GetSize();
 
             // if we couldn't get rms from the optimizer, we would calculate SSerr ourselves
