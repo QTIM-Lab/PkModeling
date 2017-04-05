@@ -76,60 +76,10 @@ namespace itk
     float m_Hematocrit;
     std::string m_IntegrationType;
     int m_ModelType;
+
     typedef itk::CostFunction::ParametersType ParametersType;
 
-    void SetHematocrit(float hematocrit) {
-      m_Hematocrit = hematocrit;
-    }
-
-    void SetModelType(int model) {
-      m_ModelType = model;
-    }
-
-    void SetIntegrationType(std::string ToftsIntegrationMethod){
-      m_IntegrationType = ToftsIntegrationMethod;
-    }
-
-    unsigned int GetNumberOfValues(void) const
-    {
-      return RangeDimension;
-    }
-
-#define IS_NAN(x) ((x) != (x))
-
-  private:
-
-
-  };
-
-  class AmoebaCostFunction : public itk::SingleValuedCostFunction
-  {
-  public:
-    typedef AmoebaCostFunction                    Self;
-    typedef itk::SingleValuedCostFunction   Superclass;
-    typedef itk::SmartPointer<Self>           Pointer;
-    typedef itk::SmartPointer<const Self>     ConstPointer;
-
-    itkNewMacro(Self);
-
-    typedef Superclass::ParametersType              ParametersType;
-    typedef Superclass::DerivativeType              DerivativeType;
-    // MeasureType is not an Array type in the AmoebaOptimizer / SingleValuedCostFunction.
-    // At many points in the code below, MeasureType is replaced with Array < double >
-    typedef Superclass::MeasureType                 MeasureType, ArrayType;
-    typedef Superclass::ParametersValueType         ValueType;
-
-    enum { SpaceDimension = 2 };
-    unsigned int RangeDimension;
-    enum ModelType { TOFTS_2_PARAMETER = 1, TOFTS_3_PARAMETER };
-    float m_Hematocrit;
-    std::string m_IntegrationType;
-    int m_ModelType;
-#define IS_NAN(x) ((x) != (x))
-
-    AmoebaCostFunction()
-    {
-    }
+    Array <double> Cv, Cb, Time;
 
     void SetHematocrit(float hematocrit) {
       m_Hematocrit = hematocrit;
@@ -158,9 +108,8 @@ namespace itk
       Cb.set_size(sz);
       for (int i = 0; i < sz; ++i)
         Cb[i] = cb[i];
-      std::cout << "Cb at Simplex Algorithm... " << Cb << std::endl;
+      //std::cout << "Cb: " << Cb << std::endl;
     }
-
 
     void SetCv(const float* cv, int sz) //Self signal Y
     {
@@ -176,6 +125,60 @@ namespace itk
       for (int i = 0; i < sz; ++i)
         Time[i] = cx[i];
       //std::cout << "Time: " << Time << std::endl;
+    }
+
+    void GetValue(ParametersType value){
+
+    }
+
+    void UseCostFunctionGradientOff(){
+
+    }
+
+    #define IS_NAN(x) ((x) != (x))
+
+    Array <double> Convolution(Array <double> X, Array <double> Y) const
+    {
+      Array <double> Z;
+      Z = vnl_convolve(X, Y).extract(X.size(), 0);
+      return Z;
+    };
+
+    Array <double> Exponential(Array <double> X) const
+    {
+      Array <double> Z;
+      Z.set_size(X.size());
+      for (unsigned int i = 0; i < X.size(); i++)
+      {
+        Z[i] = exp(X(i));
+      }
+      return Z;
+    };
+
+  private:
+
+
+  };
+
+  class AmoebaCostFunction : public itk::SingleValuedCostFunction, public itk::PkModelingCostFunction
+  {
+  public:
+    typedef AmoebaCostFunction                    Self;
+    typedef itk::SingleValuedCostFunction   Superclass;
+    typedef itk::SmartPointer<Self>           Pointer;
+    typedef itk::SmartPointer<const Self>     ConstPointer;
+
+    itkNewMacro(Self);
+
+    typedef Superclass::ParametersType              ParametersType;
+    typedef Superclass::DerivativeType              DerivativeType;
+    // MeasureType is not an Array type in the AmoebaOptimizer / SingleValuedCostFunction.
+    // At many points in the code below, MeasureType is replaced with Array < double >
+    typedef Superclass::MeasureType                 MeasureType, ArrayType;
+    typedef Superclass::ParametersValueType         ValueType;
+
+    AmoebaCostFunction()
+    {
     }
 
     unsigned int GetNumberOfParameters(void) const
@@ -252,8 +255,6 @@ namespace itk
       return final_cost;
     }
 
-    // Note that type change from MeasureType to Array <double>. SingleValuedNonLinearOptimizer
-    // does not have array versions of MeasureType.
     Array <double> GetFittedFunction(const ParametersType & parameters) const
     {
       Array <double> measure(RangeDimension);
@@ -319,26 +320,6 @@ namespace itk
     virtual ~AmoebaCostFunction(){}
   private:
 
-    Array <double> Cv, Cb, Time;
-
-    Array <double> Convolution(Array <double> X, Array <double> Y) const
-    {
-      Array <double> Z;
-      Z = vnl_convolve(X, Y).extract(X.size(), 0);
-      return Z;
-    };
-
-    Array <double> Exponential(Array <double> X) const
-    {
-      Array <double> Z;
-      Z.set_size(X.size());
-      for (unsigned int i = 0; i < X.size(); i++)
-      {
-        Z[i] = exp(X(i));
-      }
-      return Z;
-    };
-
     int constraintFunc(ValueType x) const
     {
       if (x < 0 || x>1)
@@ -351,7 +332,7 @@ namespace itk
 
   };
 
-  class LMCostFunction : public itk::MultipleValuedCostFunction
+  class LMCostFunction : public itk::MultipleValuedCostFunction, public itk::PkModelingCostFunction
   {
   public:
     typedef LMCostFunction                    Self;
@@ -360,67 +341,13 @@ namespace itk
     typedef itk::SmartPointer<const Self>     ConstPointer;
     itkNewMacro(Self);
 
-    enum { SpaceDimension = 2 };
-    unsigned int RangeDimension;
-
-    enum ModelType { TOFTS_2_PARAMETER = 1, TOFTS_3_PARAMETER };
-
     typedef Superclass::ParametersType              ParametersType;
     typedef Superclass::DerivativeType              DerivativeType;
     typedef Superclass::MeasureType                 MeasureType, ArrayType;
     typedef Superclass::ParametersValueType         ValueType;
 
-
-    float m_Hematocrit;
-
-    int m_ModelType;
-
-    std::string m_IntegrationType;
-
     LMCostFunction()
     {
-    }
-
-    void SetIntegrationType(std::string ToftsIntegrationMethod){
-      m_IntegrationType = ToftsIntegrationMethod;
-    }
-
-    void SetHematocrit(float hematocrit) {
-      m_Hematocrit = hematocrit;
-    }
-
-    void SetModelType(int model) {
-      m_ModelType = model;
-    }
-
-    void SetNumberOfValues(unsigned int NumberOfValues)
-    {
-      RangeDimension = NumberOfValues;
-    }
-
-    void SetCb(const float* cb, int sz) //BloodConcentrationCurve.
-    {
-      Cb.set_size(sz);
-      for (int i = 0; i < sz; ++i)
-        Cb[i] = cb[i];
-      //std::cout << "Cb: " << Cb << std::endl;
-    }
-
-
-    void SetCv(const float* cv, int sz) //Self signal Y
-    {
-      Cv.set_size(sz);
-      for (int i = 0; i < sz; ++i)
-        Cv[i] = cv[i];
-      //std::cout << "Cv: " << Cv << std::endl;
-    }
-
-    void SetTime(const float* cx, int sz) //Self signal X
-    {
-      Time.set_size(sz);
-      for (int i = 0; i < sz; ++i)
-        Time[i] = cx[i];
-      //std::cout << "Time: " << Time << std::endl;
     }
 
     MeasureType GetValue(const ParametersType & parameters) const
@@ -437,10 +364,9 @@ namespace itk
       }
       if (IS_NAN(Ve)){
         Ve = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
-        //std::cout << "Generated Ve: " << Ve << std::endl;
       }
 
-      ArrayType VeTerm;
+      Array <double> VeTerm;
       VeTerm = -Ktrans / Ve*Time;
       ValueType deltaT = Time(1) - Time(0);
 
@@ -492,7 +418,7 @@ namespace itk
         Ve = .01 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (.5 - .01)));
       }
 
-      ArrayType VeTerm;
+      Array <double> VeTerm;
       VeTerm = -Ktrans / Ve*Time;
       ValueType deltaT = Time(1) - Time(0);
 
@@ -556,26 +482,6 @@ namespace itk
   protected:
     virtual ~LMCostFunction(){}
   private:
-
-    ArrayType Cv, Cb, Time;
-
-    ArrayType Convolution(ArrayType X, ArrayType Y) const
-    {
-      ArrayType Z;
-      Z = vnl_convolve(X, Y).extract(X.size(), 0);
-      return Z;
-    };
-
-    ArrayType Exponential(ArrayType X) const
-    {
-      ArrayType Z;
-      Z.set_size(X.size());
-      for (unsigned int i = 0; i < X.size(); i++)
-      {
-        Z[i] = exp(X(i));
-      }
-      return Z;
-    };
 
     int constraintFunc(ValueType x) const
     {
@@ -695,7 +601,16 @@ namespace itk
     itk::LevenbergMarquardtOptimizer::Pointer  LM_optimizer = itk::LevenbergMarquardtOptimizer::New();
     itk::LMCostFunction::Pointer LM_costFunction = itk::LMCostFunction::New();
 
-    Array <double> Get_Fitting_Measure(const std::string FittingMethod, itk::PkModelingCostFunction::ParametersType param){
+    itk::PkModelingCostFunction* GetCostFunctionPointer(const std::string FittingMethod){
+      if (FittingMethod == "Simplex Algorithm"){
+        return amoeba_costFunction;
+      }
+      else{
+        return LM_costFunction;
+      }
+    }
+
+    Array <double> GetFittingMeasure(const std::string FittingMethod, itk::PkModelingCostFunction::ParametersType param){
       if (FittingMethod == "Simplex Algorithm"){
         return amoeba_costFunction->GetFittedFunction(param);
       }
@@ -704,7 +619,7 @@ namespace itk
       }
     }
 
-    double Get_Fitting_rms(const std::string FittingMethod){
+    double GetFittingRMS(const std::string FittingMethod){
       if (FittingMethod == "Simplex Algorithm"){
         return amoeba_optimizer->GetOptimizer()->get_end_error();
       }

@@ -430,12 +430,12 @@ namespace itk
 
         // Calculate parameter ktrans, ve, and fpv
         double rSquared = 0.0;
-        std::cout << "About to check for success... " << std::endl;
+
         if (success)
         {
-           std::cout << "Initial Success Code passed... " << std::endl;
-           itk::PkModelingOptimizer optimizer;
-           std::cout << "Optimizer initialized.." << std::endl;
+
+            itk::PkModelingOptimizer optimizer;
+
             optimizerErrorCode = pk_solver(timeSize, &timeMinute[0],
               const_cast<float *>(shiftedVectorVoxel.GetDataPointer()),
               &m_AIF[0], m_ToftsIntegrationMethod,
@@ -445,7 +445,6 @@ namespace itk
               m_FittingMethod, optimizer, m_ModelType, m_constantBAT, m_BATCalculationMode);
 
             int timeSize = (int)inputVectorVolume->GetNumberOfComponentsPerPixel();
-            std::cout << "Got the error code... " << std::endl;
             //set up optimizer and cost function
 
             itk::PkModelingCostFunction::ParametersType param(3);
@@ -454,11 +453,12 @@ namespace itk
             {
               param[2] = tempFpv;
             }
+
             std::cout << "Set up the optimizer... " << std::endl;
             // Amoeba optimizer does not have an Array version of Measure type,
             // so I manually specify Array here.
 
-            Array < double > measure = optimizer.Get_Fitting_Measure(m_FittingMethod, param);
+            Array < double > measure = optimizer.GetFittingMeasure(m_FittingMethod, param);
             std::cout << "Got the fitted function... " << std::endl;
             for (size_t i = 0; i < fittedVectorVoxel.GetSize(); i++)
             {
@@ -493,7 +493,7 @@ namespace itk
             // fitting nonlinear functions.
 
             // SSerr we can get easily from the optimizer
-            double rms = optimizer.Get_Fitting_rms(m_FittingMethod);
+            double rms = optimizer.GetFittingRMS(m_FittingMethod);
             double SSerr = rms*rms*shiftedVectorVoxel.GetSize();
 
             // if we couldn't get rms from the optimizer, we would calculate SSerr ourselves
