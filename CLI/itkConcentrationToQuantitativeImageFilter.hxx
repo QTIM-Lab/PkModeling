@@ -454,17 +454,17 @@ namespace itk
               param[2] = tempFpv;
             }
 
-            std::cout << "Set up the optimizer... " << std::endl;
+            //std::cout << "Set up the optimizer... " << std::endl;
             // Amoeba optimizer does not have an Array version of Measure type,
             // so I manually specify Array here.
 
             Array < double > measure = optimizer.GetFittingMeasure(m_FittingMethod, param);
-            std::cout << "Got the fitted function... " << std::endl;
+            //std::cout << "Got the fitted function... " << std::endl;
             for (size_t i = 0; i < fittedVectorVoxel.GetSize(); i++)
             {
               fittedVectorVoxel[i] = measure[i];
             }
-            std::cout << "Set up the cost function... " << std::endl;
+            //std::cout << "Set up the cost function... " << std::endl;
             // Shift the current time course to align with the BAT of the AIF
             // (note the sense of the shift)
             shiftedVectorVoxel.Fill(0.0);
