@@ -218,9 +218,9 @@
       <longflag>FittingMethod</longflag>
       <label>Fitting Algorithm</label>
       <description>Determine which fitting algorithm will be used for predicting parametric values.</description>
-      <default>Simplex Algorithm</default>
-      <element>Simplex Algorithm</element>
-      <element>Levenberg-Marquardt Algorithm</element>
+      <default>Simplex</default>
+      <element>Simplex</element>
+      <element>Levenberg-Marquardt</element>
     </string-enumeration>    
     <integer>
       <name>ConstantBAT</name>

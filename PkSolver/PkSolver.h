@@ -602,7 +602,7 @@ namespace itk
     itk::LMCostFunction::Pointer LM_costFunction = itk::LMCostFunction::New();
 
     itk::PkModelingCostFunction* GetCostFunctionPointer(const std::string FittingMethod){
-      if (FittingMethod == "Simplex Algorithm"){
+      if (FittingMethod == "Simplex"){
         return amoeba_costFunction;
       }
       else{
@@ -611,7 +611,7 @@ namespace itk
     }
 
     Array <double> GetFittingMeasure(const std::string FittingMethod, itk::PkModelingCostFunction::ParametersType param){
-      if (FittingMethod == "Simplex Algorithm"){
+      if (FittingMethod == "Simplex"){
         return amoeba_costFunction->GetFittedFunction(param);
       }
       else{
@@ -620,7 +620,7 @@ namespace itk
     }
 
     double GetFittingRMS(const std::string FittingMethod){
-      if (FittingMethod == "Simplex Algorithm"){
+      if (FittingMethod == "Simplex"){
         return amoeba_optimizer->GetOptimizer()->get_end_error();
       }
       else{

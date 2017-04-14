@@ -40,7 +40,7 @@ namespace itk
     m_ModelType = itk::PkModelingCostFunction::TOFTS_2_PARAMETER;
     m_constantBAT = 0;
     m_BATCalculationMode = "PeakGradient";
-    m_FittingMethod = "Simplex Algorithm";
+    m_FittingMethod = "Simplex";
     this->Superclass::SetNumberOfRequiredInputs(1);
     this->Superclass::SetNthOutput(1, static_cast<TOutputImage*>(this->MakeOutput(1).GetPointer()));  // Ktrans
     this->Superclass::SetNthOutput(2, static_cast<TOutputImage*>(this->MakeOutput(2).GetPointer()));  // Ve
@@ -454,17 +454,15 @@ namespace itk
               param[2] = tempFpv;
             }
 
-            //std::cout << "Set up the optimizer... " << std::endl;
             // Amoeba optimizer does not have an Array version of Measure type,
             // so I manually specify Array here.
 
             Array < double > measure = optimizer.GetFittingMeasure(m_FittingMethod, param);
-            //std::cout << "Got the fitted function... " << std::endl;
             for (size_t i = 0; i < fittedVectorVoxel.GetSize(); i++)
             {
               fittedVectorVoxel[i] = measure[i];
             }
-            //std::cout << "Set up the cost function... " << std::endl;
+
             // Shift the current time course to align with the BAT of the AIF
             // (note the sense of the shift)
             shiftedVectorVoxel.Fill(0.0);
@@ -515,8 +513,6 @@ namespace itk
             double SStot = sumSquared - sum*sum / (double)shiftedVectorVoxel.GetSize();
 
             rSquared = 1.0 - (SSerr / SStot);
-
-            std::cout << "Done checking for success... " << std::endl;
 
             /*
             double rSquaredThreshold = 0.15;

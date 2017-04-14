@@ -101,7 +101,7 @@ namespace itk
     costFunction->SetModelType(modelType);
     costFunction->SetIntegrationType(ToftsIntegrationMethod);
 
-    if (m_FittingMethod == "Simplex Algorithm"){
+    if (m_FittingMethod == "Simplex"){
 
       try {
         optimizer.amoeba_optimizer->SetCostFunction(optimizer.amoeba_costFunction);
@@ -150,7 +150,7 @@ namespace itk
       return true;
     }
 
-    if (m_FittingMethod == "Levenberg-Marquardt Algorithm"){
+    if (m_FittingMethod == "Levenberg-Marquardt"){
 
       optimizer.LM_optimizer->UseCostFunctionGradientOff();
       //optimizer->SetUseCostFunctionGradient(0);
@@ -287,7 +287,7 @@ namespace itk
     costFunction->SetModelType(modelType);
     costFunction->SetIntegrationType(ToftsIntegrationMethod);
 
-    if (m_FittingMethod == "Simplex Algorithm"){
+    if (m_FittingMethod == "Simplex"){
 
       try {
         optimizer.amoeba_optimizer->SetCostFunction(optimizer.amoeba_costFunction);
