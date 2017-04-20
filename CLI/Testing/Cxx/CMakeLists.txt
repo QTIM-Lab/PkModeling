@@ -28,7 +28,7 @@ if(QINPROSTATE001)
     --compare ${QINPROSTATE001}/Baseline/phantom-ktrans.nrrd
     ${TEMP}/${testname}-ktrans.nrrd
     ModuleEntryPoint        
-                --T1Tissue 1000
+                --T1Tissue 1597
                 --T1Blood 1600
                 --relaxivity 0.0039
                 --S0grad 15.0
@@ -136,7 +136,7 @@ endif()
 # set(testname ${CLP}TestDCEMRIData)
 # add_test(NAME ${testname} COMMAND ${Launcher_Command} $<TARGET_FILE:${CLP}Test>
 #                 ModuleEntryPoint
-#                 --T1Tissue 1000
+#                 --T1Tissue 1597
 #                 --T1Blood 1600
 #                 #--TR 3.984
 #                 #--FA 15
