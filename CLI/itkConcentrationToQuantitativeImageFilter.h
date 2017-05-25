@@ -135,6 +135,8 @@ public:
   itkSetMacro( constantBAT, int);
   itkGetMacro( BATCalculationMode, std::string);
   itkSetMacro( BATCalculationMode, std::string);
+  itkGetMacro( ToftsIntegrationMethod, std::string);
+  itkSetMacro( ToftsIntegrationMethod, std::string);
 
   void SetTiming(const std::vector<float>& inputTiming);
   const std::vector<float>& GetTiming();
@@ -243,6 +245,7 @@ private:
   bool   m_MaskByRSquared;
   int m_constantBAT;
   std::string m_BATCalculationMode;
+  std::string m_ToftsIntegrationMethod;
 
   std::vector<float> m_Timing;
 

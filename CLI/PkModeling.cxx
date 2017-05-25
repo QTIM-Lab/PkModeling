@@ -369,6 +369,7 @@ int DoIt( int argc, char * argv[], const T1 &, const T2 &)
   converter->SetTR(TRValue);
   converter->SetFA(FAValue);
   converter->SetBATCalculationMode(BATCalculationMode);
+  converter->SetToftsIntegrationMethod(ToftsIntegrationMethod);
   converter->SetconstantBAT(ConstantBAT);
   converter->SetRGD_relaxivity(RelaxivityValue);
   converter->SetS0GradThresh(S0GradValue);
@@ -425,6 +426,8 @@ int DoIt( int argc, char * argv[], const T1 &, const T2 &)
   quantifier->Sethematocrit(Hematocrit);
   quantifier->SetconstantBAT(ConstantBAT);
   quantifier->SetBATCalculationMode(BATCalculationMode);
+  quantifier->SetToftsIntegrationMethod(ToftsIntegrationMethod);
+
   if(ROIMaskFileName != "")
     {
     quantifier->SetROIMask(roiMaskVolume);
@@ -432,11 +435,11 @@ int DoIt( int argc, char * argv[], const T1 &, const T2 &)
 
   if(ComputeFpv)
     {
-    quantifier->SetModelType(itk::LMCostFunction::TOFTS_3_PARAMETER);
+    quantifier->SetModelType(itk::AmoebaCostFunction::TOFTS_3_PARAMETER);
     }
   else
     {
-    quantifier->SetModelType(itk::LMCostFunction::TOFTS_2_PARAMETER);
+    quantifier->SetModelType(itk::AmoebaCostFunction::TOFTS_2_PARAMETER);
     }
   quantifier->SetMaskByRSquared(OutputRSquaredFileName.empty());
 

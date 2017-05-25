@@ -6,6 +6,7 @@
 #include "itkImageRegionIterator.h"
 #include "itkProgressReporter.h"
 #include "itkLevenbergMarquardtOptimizer.h"
+#include "itkAmoebaOptimizer.h"
 #include "vnl/vnl_math.h"
 
 // work around compile error on Windows
@@ -36,7 +37,7 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>::Con
   m_UsePopulationAIF = false;
   m_UsePrescribedAIF = false;
   m_MaskByRSquared = true;
-  m_ModelType = itk::LMCostFunction::TOFTS_2_PARAMETER;
+  m_ModelType = itk::AmoebaCostFunction::TOFTS_2_PARAMETER;
   m_constantBAT = 0;
   m_BATCalculationMode = "PeakGradient";
   this->Superclass::SetNumberOfRequiredInputs(1);
@@ -327,7 +328,7 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
     }
 
   OutputVolumeIterType fpvVolumeIter;
-  if(m_ModelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+  if(m_ModelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
     {
     fpvVolumeIter = OutputVolumeIterType(this->GetFPVOutput(), outputRegionForThread);
     }
@@ -337,8 +338,8 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
   OutputVolumeIterType batVolumeIter(this->GetBATOutput(), outputRegionForThread);
 
   //set up optimizer and cost function
-  itk::LevenbergMarquardtOptimizer::Pointer optimizer = itk::LevenbergMarquardtOptimizer::New();
-  LMCostFunction::Pointer                   costFunction = LMCostFunction::New();
+  itk::AmoebaOptimizer::Pointer optimizer = itk::AmoebaOptimizer::New();
+  AmoebaCostFunction::Pointer                   costFunction = AmoebaCostFunction::New();
   int timeSize = (int)inputVectorVolume->GetNumberOfComponentsPerPixel();
 
   std::vector<float> timeMinute;
@@ -437,19 +438,22 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
         {
         optimizerErrorCode = pk_solver(timeSize, &timeMinute[0],
           	const_cast<float *>(shiftedVectorVoxel.GetDataPointer() ),
-          	&m_AIF[0],
+          	&m_AIF[0], m_ToftsIntegrationMethod,
           	tempKtrans, tempVe, tempFpv,
           	m_fTol,m_gTol,m_xTol,
           	m_epsilon,m_maxIter, m_hematocrit,
             optimizer,costFunction,m_ModelType,m_constantBAT,m_BATCalculationMode);
 
-        itk::LMCostFunction::ParametersType param(3);
+        itk::AmoebaCostFunction::ParametersType param(3);
         param[0] = tempKtrans; param[1] = tempVe;
-        if(m_ModelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+        if(m_ModelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
           {
           param[2] = tempFpv;
           }
-        itk::LMCostFunction::MeasureType measure =
+
+		// Amoeba optimizer does not have an Array version of Measure type,
+		// so I manually specify Array here.
+        Array < double > measure =
           costFunction->GetFittedFunction(param);
         for(size_t i=0;i<fittedVectorVoxel.GetSize();i++)
           {
@@ -488,7 +492,7 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
         double SSerr = rms*rms*shiftedVectorVoxel.GetSize();
 
         // if we couldn't get rms from the optimizer, we would calculate SSerr ourselves
-        // LMCostFunction::MeasureType residuals = costFunction->GetValue(optimizer->GetCurrentPosition());
+        // AmoebaCostFunction::MeasureType residuals = costFunction->GetValue(optimizer->GetCurrentPosition());
         // double SSerr = 0.0;
         // for (unsigned int i=0; i < residuals.size(); ++i)
         //   {
@@ -533,7 +537,7 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
           veVolumeIter.Set(static_cast<OutputVolumePixelType>(tempVe) );
           maxSlopeVolumeIter.Set(static_cast<OutputVolumePixelType>(tempMaxSlope) );
           aucVolumeIter.Set(static_cast<OutputVolumePixelType>(tempAUC) );
-          if(m_ModelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+          if(m_ModelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
             {
             fpvVolumeIter.Set(static_cast<OutputVolumePixelType>(tempFpv));
             }
@@ -552,7 +556,7 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
         veVolumeIter.Set(static_cast<OutputVolumePixelType>(tempVe) );
         maxSlopeVolumeIter.Set(static_cast<OutputVolumePixelType>(tempMaxSlope) );
         aucVolumeIter.Set(static_cast<OutputVolumePixelType>(tempAUC) );
-        if(m_ModelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+        if(m_ModelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
           {
           fpvVolumeIter.Set(static_cast<OutputVolumePixelType>(tempFpv));
           }
@@ -583,7 +587,7 @@ ConcentrationToQuantitativeImageFilter<TInputImage,TMaskImage,TOutputImage>
       ++roiMaskVolumeIter;
       }
 
-    if(m_ModelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+    if(m_ModelType == itk::AmoebaCostFunction::TOFTS_3_PARAMETER)
       {
       ++fpvVolumeIter;
       }
