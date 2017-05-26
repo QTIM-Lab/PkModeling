@@ -372,6 +372,7 @@ type Get##name(itk::MetaDataDictionary& dictionary)           \
     converter->SetconstantBAT(ConstantBAT);
     converter->SetRGD_relaxivity(RelaxivityValue);
     converter->SetS0GradThresh(S0GradValue);
+    converter->SetToftsIntegrationMethod(ToftsIntegrationMethod);
 
     if (T1MapFileName != "")
     {
@@ -425,6 +426,7 @@ type Get##name(itk::MetaDataDictionary& dictionary)           \
     quantifier->Sethematocrit(Hematocrit);
     quantifier->SetconstantBAT(ConstantBAT);
     quantifier->SetBATCalculationMode(BATCalculationMode);
+    quantifier->SetToftsIntegrationMethod(ToftsIntegrationMethod);
     if (ROIMaskFileName != "")
     {
       quantifier->SetROIMask(roiMaskVolume);

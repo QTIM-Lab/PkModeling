@@ -105,6 +105,8 @@ namespace itk
     itkSetMacro(S0GradThresh, float);
     itkGetMacro(BATCalculationMode, std::string);
     itkSetMacro(BATCalculationMode, std::string);
+    itkGetMacro(ToftsIntegrationMethod, std::string);
+    itkSetMacro(ToftsIntegrationMethod, std::string);
     itkGetMacro(constantBAT, int);
     itkSetMacro(constantBAT, int);
 
@@ -173,6 +175,7 @@ namespace itk
     float m_RGD_relaxivity;
     float m_S0GradThresh;
     std::string m_BATCalculationMode;
+    std::string m_ToftsIntegrationMethod;
     int m_constantBAT;
   };
 

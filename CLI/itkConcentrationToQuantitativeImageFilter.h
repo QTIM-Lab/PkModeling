@@ -135,6 +135,8 @@ namespace itk
     itkSetMacro(constantBAT, int);
     itkGetMacro(BATCalculationMode, std::string);
     itkSetMacro(BATCalculationMode, std::string);
+    itkGetMacro(ToftsIntegrationMethod, std::string);
+    itkSetMacro(ToftsIntegrationMethod, std::string);
 
     void SetTiming(const std::vector<float>& inputTiming);
     const std::vector<float>& GetTiming();
@@ -246,6 +248,7 @@ namespace itk
     int    m_ModelType;
     bool   m_MaskByRSquared;
     int m_constantBAT;
+    std::string m_ToftsIntegrationMethod;
     std::string m_BATCalculationMode;
 
     std::vector<float> m_Timing;

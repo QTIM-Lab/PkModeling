@@ -37,6 +37,7 @@ namespace itk
     m_UsePrescribedAIF = false;
     m_MaskByRSquared = true;
     m_ModelType = itk::LMCostFunction::TOFTS_2_PARAMETER;
+    m_ToftsIntegrationMethod = "Recursive";
     m_constantBAT = 0;
     m_BATCalculationMode = "PeakGradient";
     this->Superclass::SetNumberOfRequiredInputs(1);
@@ -438,6 +439,7 @@ namespace itk
           optimizerErrorCode = pk_solver(timeSize, &timeMinute[0],
             const_cast<float *>(shiftedVectorVoxel.GetDataPointer()),
             &m_AIF[0],
+            m_ToftsIntegrationMethod,
             tempKtrans, tempVe, tempFpv,
             m_fTol, m_gTol, m_xTol,
             m_epsilon, m_maxIter, m_hematocrit,
@@ -862,6 +864,7 @@ namespace itk
     ::PrintSelf(std::ostream& os, Indent indent) const
   {
     Superclass::PrintSelf(os, indent);
+    os << indent << "Integration Method: " << m_ToftsIntegrationMethod << std::endl;
     os << indent << "Function tolerance: " << m_fTol << std::endl;
     os << indent << "Gradient tolerance: " << m_gTol << std::endl;
     os << indent << "Parameter tolerance: " << m_xTol << std::endl;

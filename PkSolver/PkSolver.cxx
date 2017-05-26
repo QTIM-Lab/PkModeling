@@ -29,6 +29,7 @@ namespace itk
 
   int m_ConstantBAT;
   std::string m_BATCalculationMode;
+  std::string m_ToftsIntegrationMethod;
 
   //
   // Implementation of the PkSolver API
@@ -38,6 +39,7 @@ namespace itk
   bool pk_solver(int signalSize, const float* timeAxis,
     const float* PixelConcentrationCurve,
     const float* BloodConcentrationCurve,
+    const std::string ToftsIntegrationMethod,
     float& Ktrans, float& Ve, float& Fpv,
     float fTol, float gTol, float xTol,
     float epsilon, int maxIter,
@@ -55,6 +57,7 @@ namespace itk
 
     m_BATCalculationMode = BATCalculationMode;
     m_ConstantBAT = constantBAT;
+    m_ToftsIntegrationMethod = ToftsIntegrationMethod;
 
     // Levenberg Marquardt optimizer
     itk::LevenbergMarquardtOptimizer::Pointer  optimizer = itk::LevenbergMarquardtOptimizer::New();
@@ -79,6 +82,7 @@ namespace itk
     costFunction->SetCv(PixelConcentrationCurve, signalSize); //Signal Y
     costFunction->SetTime(timeAxis, signalSize); //Signal X
     costFunction->SetHematocrit(hematocrit);
+    costFunction->SetIntegrationType(m_ToftsIntegrationMethod);
     costFunction->GetValue(initialValue);
     costFunction->SetModelType(modelType);
 
@@ -147,6 +151,7 @@ namespace itk
   unsigned pk_solver(int signalSize, const float* timeAxis,
     const float* PixelConcentrationCurve,
     const float* BloodConcentrationCurve,
+    const std::string ToftsIntegrationMethod,
     float& Ktrans, float& Ve, float& Fpv,
     float fTol, float gTol, float xTol,
     float epsilon, int maxIter,
@@ -170,6 +175,7 @@ namespace itk
 
     m_BATCalculationMode = BATCalculationMode;
     m_ConstantBAT = constantBAT;
+    m_ToftsIntegrationMethod = ToftsIntegrationMethod;
 
     // Levenberg Marquardt optimizer
 
@@ -194,6 +200,7 @@ namespace itk
     costFunction->SetCv(PixelConcentrationCurve, signalSize); //Signal Y
     costFunction->SetTime(timeAxis, signalSize); //Signal X
     costFunction->SetHematocrit(hematocrit);
+    costFunction->SetIntegrationType(m_ToftsIntegrationMethod);
     costFunction->GetValue(initialValue); //...
     costFunction->SetModelType(modelType);
 
