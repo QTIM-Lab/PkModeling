@@ -6,6 +6,7 @@
 #include "itkImageRegionIterator.h"
 #include "itkProgressReporter.h"
 #include "itkLevenbergMarquardtOptimizer.h"
+#include "itkAmoebaOptimizer.h"
 #include "vnl/vnl_math.h"
 
 // work around compile error on Windows
@@ -39,6 +40,7 @@ namespace itk
     m_ModelType = itk::LMCostFunction::TOFTS_2_PARAMETER;
     m_constantBAT = 0;
     m_BATCalculationMode = "PeakGradient";
+    m_FittingMethod = "Simplex";
     this->Superclass::SetNumberOfRequiredInputs(1);
     this->Superclass::SetNthOutput(1, static_cast<TOutputImage*>(this->MakeOutput(1).GetPointer()));  // Ktrans
     this->Superclass::SetNthOutput(2, static_cast<TOutputImage*>(this->MakeOutput(2).GetPointer()));  // Ve
@@ -296,7 +298,7 @@ namespace itk
   void
     ConcentrationToQuantitativeImageFilter<TInputImage, TMaskImage, TOutputImage>
 #if ITK_VERSION_MAJOR < 4
-    ::ThreadedGenerateData( const OutputVolumeRegionType & outputRegionForThread, int threadId )
+    ::ThreadedGenerateData(const OutputVolumeRegionType & outputRegionForThread, int threadId)
 #else
     ::ThreadedGenerateData(const OutputVolumeRegionType& outputRegionForThread, ThreadIdType threadId)
 #endif
@@ -435,22 +437,24 @@ namespace itk
         double rSquared = 0.0;
         if (success)
         {
+
+          itk::PkModelingOptimizer optimizer;
+
           optimizerErrorCode = pk_solver(timeSize, &timeMinute[0],
             const_cast<float *>(shiftedVectorVoxel.GetDataPointer()),
-            &m_AIF[0],
-            tempKtrans, tempVe, tempFpv,
+            &m_AIF[0], tempKtrans, tempVe, tempFpv,
             m_fTol, m_gTol, m_xTol,
             m_epsilon, m_maxIter, m_hematocrit,
-            optimizer, costFunction, m_ModelType, m_constantBAT, m_BATCalculationMode);
+            m_FittingMethod, optimizer, m_ModelType, m_constantBAT, m_BATCalculationMode);
 
-          itk::LMCostFunction::ParametersType param(3);
+          itk::PkModelingCostFunction::ParametersType param(3);
           param[0] = tempKtrans; param[1] = tempVe;
-          if (m_ModelType == itk::LMCostFunction::TOFTS_3_PARAMETER)
+          if (m_ModelType == itk::PkModelingCostFunction::TOFTS_3_PARAMETER)
           {
             param[2] = tempFpv;
           }
-          itk::LMCostFunction::MeasureType measure =
-            costFunction->GetFittedFunction(param);
+
+          Array < double > measure = optimizer.GetFittingMeasure(m_FittingMethod, param);
           for (size_t i = 0; i < fittedVectorVoxel.GetSize(); i++)
           {
             fittedVectorVoxel[i] = measure[i];
@@ -484,7 +488,7 @@ namespace itk
           // fitting nonlinear functions.
 
           // SSerr we can get easily from the optimizer
-          double rms = optimizer->GetOptimizer()->get_end_error();
+          double rms = optimizer.GetFittingRMS(m_FittingMethod);
           double SSerr = rms*rms*shiftedVectorVoxel.GetSize();
 
           // if we couldn't get rms from the optimizer, we would calculate SSerr ourselves

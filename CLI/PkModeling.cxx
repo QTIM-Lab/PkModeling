@@ -372,6 +372,7 @@ type Get##name(itk::MetaDataDictionary& dictionary)           \
     converter->SetconstantBAT(ConstantBAT);
     converter->SetRGD_relaxivity(RelaxivityValue);
     converter->SetS0GradThresh(S0GradValue);
+    converter->SetFittingMethod(FittingMethod);
 
     if (T1MapFileName != "")
     {
@@ -425,6 +426,8 @@ type Get##name(itk::MetaDataDictionary& dictionary)           \
     quantifier->Sethematocrit(Hematocrit);
     quantifier->SetconstantBAT(ConstantBAT);
     quantifier->SetBATCalculationMode(BATCalculationMode);
+    quantifier->SetFittingMethod(FittingMethod);
+
     if (ROIMaskFileName != "")
     {
       quantifier->SetROIMask(roiMaskVolume);
@@ -433,10 +436,12 @@ type Get##name(itk::MetaDataDictionary& dictionary)           \
     if (ComputeFpv)
     {
       quantifier->SetModelType(itk::LMCostFunction::TOFTS_3_PARAMETER);
+      quantifier->SetModelType(itk::PkModelingCostFunction::TOFTS_3_PARAMETER);
     }
     else
     {
       quantifier->SetModelType(itk::LMCostFunction::TOFTS_2_PARAMETER);
+      quantifier->SetModelType(itk::PkModelingCostFunction::TOFTS_2_PARAMETER);
     }
     quantifier->SetMaskByRSquared(OutputRSquaredFileName.empty());
 

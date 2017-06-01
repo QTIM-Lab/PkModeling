@@ -107,6 +107,8 @@ namespace itk
     itkSetMacro(BATCalculationMode, std::string);
     itkGetMacro(constantBAT, int);
     itkSetMacro(constantBAT, int);
+    itkGetMacro(FittingMethod, std::string);
+    itkSetMacro(FittingMethod, std::string);
 
     // Set a mask image for specifying the location of the arterial
     // input function. This is interpretted as a binary image with
@@ -173,6 +175,7 @@ namespace itk
     float m_RGD_relaxivity;
     float m_S0GradThresh;
     std::string m_BATCalculationMode;
+    std::string m_FittingMethod;
     int m_constantBAT;
   };
 

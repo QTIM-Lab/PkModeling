@@ -16,6 +16,7 @@
 #define PkSolver_h_
 
 #include "itkLevenbergMarquardtOptimizer.h"
+#include "itkAmoebaOptimizer.h"
 #include <math.h>
 #include <vnl/algo/vnl_convolve.h>
 #include "itkArray.h"
@@ -23,6 +24,7 @@
 
 // work around compile error on Win
 #define M_PI 3.1415926535897932384626433832795
+#define IS_NAN(x) ((x) != (x))
 
 // codes defined in ITKv4 vnl_levenberg_marquardt.cxx:386
 enum OptimizerDiagnosticCodes
@@ -66,33 +68,19 @@ const unsigned NumOptimizerDiagnosticCodes = 11;
 namespace itk
 {
 
-  class LMCostFunction : public itk::MultipleValuedCostFunction
+  class PkModelingCostFunction
   {
   public:
-    typedef LMCostFunction                    Self;
-    typedef itk::MultipleValuedCostFunction   Superclass;
-    typedef itk::SmartPointer<Self>           Pointer;
-    typedef itk::SmartPointer<const Self>     ConstPointer;
-    itkNewMacro(Self);
 
     enum { SpaceDimension = 2 };
     unsigned int RangeDimension;
-
     enum ModelType { TOFTS_2_PARAMETER = 1, TOFTS_3_PARAMETER };
-
-    typedef Superclass::ParametersType              ParametersType;
-    typedef Superclass::DerivativeType              DerivativeType;
-    typedef Superclass::MeasureType                 MeasureType, ArrayType;
-    typedef Superclass::ParametersValueType         ValueType;
-
-
     float m_Hematocrit;
-
     int m_ModelType;
 
-    LMCostFunction()
-    {
-    }
+    typedef itk::CostFunction::ParametersType ParametersType;
+
+    Array <double> Cv, Cb, Time;
 
     void SetHematocrit(float hematocrit)
     {
@@ -102,6 +90,11 @@ namespace itk
     void SetModelType(int model)
     {
       m_ModelType = model;
+    }
+
+    unsigned int GetNumberOfValues(void) const
+    {
+      return RangeDimension;
     }
 
     void SetNumberOfValues(unsigned int NumberOfValues)
@@ -116,7 +109,6 @@ namespace itk
         Cb[i] = cb[i];
       //std::cout << "Cb: " << Cb << std::endl;
     }
-
 
     void SetCv(const float* cv, int sz) //Self signal Y
     {
@@ -134,6 +126,164 @@ namespace itk
       //std::cout << "Time: " << Time << std::endl;
     }
 
+    void GetValue(ParametersType value){
+
+    }
+
+    void UseCostFunctionGradientOff(){
+
+    }
+
+    Array <double> Convolution(Array <double> X, Array <double> Y) const
+    {
+      Array <double> Z;
+      Z = vnl_convolve(X, Y).extract(X.size(), 0);
+      return Z;
+    };
+
+    Array <double> Exponential(Array <double> X) const
+    {
+      Array <double> Z;
+      Z.set_size(X.size());
+      for (unsigned int i = 0; i < X.size(); i++)
+      {
+        Z[i] = exp(X(i));
+      }
+      return Z;
+    };
+
+  private:
+
+
+  };
+
+  class AmoebaCostFunction : public itk::SingleValuedCostFunction, public itk::PkModelingCostFunction
+  {
+  public:
+    typedef AmoebaCostFunction                    Self;
+    typedef itk::SingleValuedCostFunction   Superclass;
+    typedef itk::SmartPointer<Self>           Pointer;
+    typedef itk::SmartPointer<const Self>     ConstPointer;
+
+    itkNewMacro(Self);
+
+    typedef Superclass::ParametersType              ParametersType;
+    typedef Superclass::DerivativeType              DerivativeType;
+    // MeasureType is not an Array type in the AmoebaOptimizer / SingleValuedCostFunction.
+    // At many points in the code below, MeasureType is replaced with Array < double >
+    typedef Superclass::MeasureType                 MeasureType, ArrayType;
+    typedef Superclass::ParametersValueType         ValueType;
+
+    AmoebaCostFunction()
+    {
+    }
+
+    unsigned int GetNumberOfParameters(void) const
+    {
+      if (m_ModelType == TOFTS_2_PARAMETER)
+      {
+        return 2;
+      }
+      else // if(m_ModelType == TOFTS_3_PARAMETER)
+      {
+        return 3;
+      }
+    }
+
+    MeasureType GetValue(const ParametersType & parameters) const
+    {
+      MeasureType final_cost = 0;
+      Array <double> measure(RangeDimension);
+
+      ValueType Ktrans = parameters[0];
+      ValueType Ve = parameters[1];
+
+      Array <double> VeTerm;
+      VeTerm = -Ktrans / Ve*Time;
+      ValueType deltaT = Time(1) - Time(0);
+
+      if (m_ModelType == TOFTS_3_PARAMETER)
+      {
+        ValueType f_pv = parameters[2];
+        measure = Cv - (1 / (1.0 - m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb, Exponential(VeTerm)) + f_pv*Cb));
+        for (unsigned int t = 1; t < RangeDimension; ++t)
+        {
+          final_cost = final_cost + pow(measure[t], 2);
+        }
+      }
+      else if (m_ModelType == TOFTS_2_PARAMETER)
+      {
+        measure = Cv - (1 / (1.0 - m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb, Exponential(VeTerm))));
+        for (unsigned int t = 1; t < RangeDimension; ++t)
+        {
+          final_cost = final_cost + pow(measure[t], 2);
+        }
+      }
+
+      return final_cost;
+    }
+
+    Array <double> GetFittedFunction(const ParametersType & parameters) const
+    {
+      Array <double> measure(RangeDimension);
+
+      ValueType Ktrans = parameters[0];
+      ValueType Ve = parameters[1];
+
+      Array <double> VeTerm;
+      VeTerm = -Ktrans / Ve*Time;
+      ValueType deltaT = Time(1) - Time(0);
+
+      if (m_ModelType == TOFTS_3_PARAMETER)
+      {
+        ValueType f_pv = parameters[2];
+        measure = 1 / (1.0 - m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb, Exponential(VeTerm)) + f_pv*Cb);
+      }
+      else if (m_ModelType == TOFTS_2_PARAMETER)
+      {
+        measure = 1 / (1.0 - m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb, Exponential(VeTerm)));
+      }
+
+      return measure;
+    }
+
+    //Not going to be used - we have no derivative for the Tofts model at present.
+    void GetDerivative(const ParametersType & /* parameters*/,
+      DerivativeType  & /*derivative*/) const
+    {
+    }
+
+  protected:
+    virtual ~AmoebaCostFunction(){}
+  private:
+
+    int constraintFunc(ValueType x) const
+    {
+      if (x < 0 || x>1)
+        return 1;
+      else
+        return 0;
+    };
+  };
+
+  class LMCostFunction : public itk::MultipleValuedCostFunction, public itk::PkModelingCostFunction
+  {
+  public:
+    typedef LMCostFunction                    Self;
+    typedef itk::MultipleValuedCostFunction   Superclass;
+    typedef itk::SmartPointer<Self>           Pointer;
+    typedef itk::SmartPointer<const Self>     ConstPointer;
+    itkNewMacro(Self);
+
+    typedef Superclass::ParametersType              ParametersType;
+    typedef Superclass::DerivativeType              DerivativeType;
+    typedef Superclass::MeasureType                 MeasureType, ArrayType;
+    typedef Superclass::ParametersValueType         ValueType;
+
+    LMCostFunction()
+    {
+    }
+
     MeasureType GetValue(const ParametersType & parameters) const
     {
       MeasureType measure(RangeDimension);
@@ -141,7 +291,7 @@ namespace itk
       ValueType Ktrans = parameters[0];
       ValueType Ve = parameters[1];
 
-      ArrayType VeTerm;
+      Array <double> VeTerm;
       VeTerm = -Ktrans / Ve*Time;
       ValueType deltaT = Time(1) - Time(0);
 
@@ -165,7 +315,7 @@ namespace itk
       ValueType Ktrans = parameters[0];
       ValueType Ve = parameters[1];
 
-      ArrayType VeTerm;
+      Array <double> VeTerm;
       VeTerm = -Ktrans / Ve*Time;
       ValueType deltaT = Time(1) - Time(0);
 
@@ -178,9 +328,9 @@ namespace itk
       {
         measure = 1 / (1.0 - m_Hematocrit)*(Ktrans*deltaT*Convolution(Cb, Exponential(VeTerm)));
       }
-
       return measure;
     }
+
 
     //Not going to be used
     void GetDerivative(const ParametersType & /* parameters*/,
@@ -209,26 +359,6 @@ namespace itk
     virtual ~LMCostFunction(){}
   private:
 
-    ArrayType Cv, Cb, Time;
-
-    ArrayType Convolution(ArrayType X, ArrayType Y) const
-    {
-      ArrayType Z;
-      Z = vnl_convolve(X, Y).extract(X.size(), 0);
-      return Z;
-    };
-
-    ArrayType Exponential(ArrayType X) const
-    {
-      ArrayType Z;
-      Z.set_size(X.size());
-      for (unsigned int i = 0; i < X.size(); i++)
-      {
-        Z[i] = exp(X(i));
-      }
-      return Z;
-    };
-
     int constraintFunc(ValueType x) const
     {
       if (x < 0 || x>1)
@@ -236,8 +366,6 @@ namespace itk
       else
         return 0;
     };
-
-
   };
 
   class CommandIterationUpdateLevenbergMarquardt : public itk::Command
@@ -265,8 +393,7 @@ namespace itk
     void Execute(const itk::Object * object, const itk::EventObject & event)
     {
       //std::cout << "Observer::Execute() " << std::endl;
-      OptimizerPointer optimizer =
-        dynamic_cast<OptimizerPointer>(object);
+      OptimizerPointer optimizer = dynamic_cast<OptimizerPointer>(object);
       if (m_FunctionEvent.CheckEvent(&event))
       {
         // std::cout << m_IterationNumber++ << "   ";
@@ -277,39 +404,144 @@ namespace itk
       {
         std::cout << "Gradient " << optimizer->GetCachedDerivative() << "   ";
       }
-
     }
   private:
     unsigned long m_IterationNumber;
-
     itk::FunctionEvaluationIterationEvent m_FunctionEvent;
     itk::GradientEvaluationIterationEvent m_GradientEvent;
   };
-  bool pk_solver(int signalSize, const float* timeAxis,
+
+  class CommandIterationUpdateAmoeba : public itk::Command
+  {
+  public:
+    typedef  CommandIterationUpdateAmoeba   Self;
+    typedef  itk::Command                               Superclass;
+    typedef itk::SmartPointer<Self>                     Pointer;
+    itkNewMacro(Self);
+  protected:
+    CommandIterationUpdateAmoeba()
+    {
+      m_IterationNumber = 0;
+    }
+    virtual ~CommandIterationUpdateAmoeba(){}
+  public:
+    typedef itk::AmoebaOptimizer   OptimizerType;
+    typedef   const OptimizerType   *          OptimizerPointer;
+
+    void Execute(itk::Object *caller, const itk::EventObject & event)
+    {
+      Execute((const itk::Object *)caller, event);
+    }
+
+    void Execute(const itk::Object * object, const itk::EventObject & event)
+    {
+      //std::cout << m_IterationNumber++ << std::endl;
+      //std::cout << "Observer::Execute() " << std::endl;
+      OptimizerPointer optimizer = dynamic_cast<OptimizerPointer>(object);
+      if (m_FunctionEvent.CheckEvent(&event))
+      {
+        //std::cout << m_IterationNumber++ << "   ";
+        //std::cout << optimizer->GetCachedValue() << "   ";
+        //std::cout << optimizer->GetCachedCurrentPosition() << std::endl;
+      }
+      else if (m_GradientEvent.CheckEvent(&event))
+      {
+        //std::cout << "Gradient " << optimizer->GetCachedDerivative() << "   ";
+      }
+    }
+  private:
+    unsigned long m_IterationNumber;
+    itk::FunctionEvaluationIterationEvent m_FunctionEvent;
+    itk::GradientEvaluationIterationEvent m_GradientEvent;
+  };
+
+  class PkModelingOptimizer
+  {
+  public:
+
+    void SetCostFunction(itk::PkModelingCostFunction *)
+    {
+    }
+
+    itk::AmoebaOptimizer::Pointer  amoeba_optimizer = itk::AmoebaOptimizer::New();
+    itk::AmoebaCostFunction::Pointer amoeba_costFunction = itk::AmoebaCostFunction::New();
+    itk::LevenbergMarquardtOptimizer::Pointer  LM_optimizer = itk::LevenbergMarquardtOptimizer::New();
+    itk::LMCostFunction::Pointer LM_costFunction = itk::LMCostFunction::New();
+
+    itk::PkModelingCostFunction* GetCostFunctionPointer(const std::string FittingMethod)
+    {
+      if (FittingMethod == "Simplex")
+      {
+        return amoeba_costFunction;
+      }
+      else
+      {
+        return LM_costFunction;
+      }
+    }
+
+    Array <double> GetFittingMeasure(const std::string FittingMethod, itk::PkModelingCostFunction::ParametersType param)
+    {
+      if (FittingMethod == "Simplex")
+      {
+        return amoeba_costFunction->GetFittedFunction(param);
+      }
+      else
+      {
+        return LM_costFunction->GetFittedFunction(param);
+      }
+    }
+
+    double GetFittingRMS(const std::string FittingMethod)
+    {
+      if (FittingMethod == "Simplex")
+      {
+        return amoeba_optimizer->GetOptimizer()->get_end_error();
+      }
+      else
+      {
+        return LM_optimizer->GetOptimizer()->get_end_error();
+      }
+    }
+  };
+
+  bool pk_solver(int signalSize,
+    const float* timeAxis,
     const float* PixelConcentrationCurve,
     const float* BloodConcentrationCurve,
-    float& Ktrans, float& Ve, float& Fpv,
+    const std::string FittingMethod,
+    float& Ktrans,
+    float& Ve,
+    float& Fpv,
     float fTol = 1e-4f,
     float gTol = 1e-4f,
     float xTol = 1e-5f,
     float epsilon = 1e-9f,
     int maxIter = 200,
     float hematocrit = 0.4f,
-    int modelType = itk::LMCostFunction::TOFTS_2_PARAMETER,
+    int modelType = itk::AmoebaCostFunction::TOFTS_2_PARAMETER,
     int constantBAT = 0,
     const std::string BATCalculationMode = "PeakGradient");
 
   // returns diagnostic error code from the VNL optimizer,
   //  as defined by OptimizerDiagnosticCodes, and masked to indicate
   //  wheather Ktrans or Ve were clamped.
-  unsigned pk_solver(int signalSize, const float* timeAxis,
-    const float* PixelConcentrationCurve, const float* BloodConcentrationCurve,
-    float& Ktrans, float& Ve, float& Fpv,
-    float fTol, float gTol, float xTol,
-    float epsilon, int maxIter, float hematocrit,
-    itk::LevenbergMarquardtOptimizer* optimizer,
-    LMCostFunction* costFunction,
-    int modelType = itk::LMCostFunction::TOFTS_2_PARAMETER,
+  unsigned pk_solver(int signalSize,
+    const float* timeAxis,
+    const float* PixelConcentrationCurve,
+    const float* BloodConcentrationCurve,
+    float& Ktrans,
+    float& Ve,
+    float& Fpv,
+    float fTol,
+    float gTol,
+    float xTol,
+    float epsilon,
+    int maxIter,
+    float hematocrit,
+    const std::string FittingMethod,
+    itk::PkModelingOptimizer optimizer,
+    int modelType = itk::PkModelingCostFunction::TOFTS_2_PARAMETER,
     int constantBAT = 0,
     const std::string BATCalculationMode = "PeakGradient");
 

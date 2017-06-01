@@ -212,6 +212,15 @@
       <channel>input</channel>
       <default>1</default>
     </integer>
+    <string-enumeration>
+      <name>FittingMethod</name>
+      <longflag>FittingMethod</longflag>
+      <label>Fitting Algorithm</label>
+      <description>Determine which fitting algorithm will be used for predicting parametric values.</description>
+      <default>Levenberg-Marquardt</default>
+      <element>Levenberg-Marquardt</element>
+      <element>Simplex</element>
+    </string-enumeration>   
     <image>
       <name>OutputRSquaredFileName</name>
       <longflag>outputRSquared</longflag>
