@@ -6,6 +6,7 @@ set(TEMP ${PkModeling_BINARY_DIR}/Testing/Temporary)
 #set(DUKEDATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Data/DukeData)
 #set(SYNDATA ${CMAKE_CURRENT_SOURCE_DIR}/../../Data/SyntheticData)
 set(QINPROSTATE001 ${CMAKE_CURRENT_SOURCE_DIR}/../../../Data/SampledPhantoms/QINProstate001)
+set(GRADIENTPHANTOM ${CMAKE_CURRENT_SOURCE_DIR}/../../../Data/GradientPhantom)
 
 set(CLP ${MODULE_NAME})
 
@@ -17,22 +18,54 @@ set_target_properties(${CLP}Test PROPERTIES LABELS ${CLP})
 #-----------------------------------------------------------------------------
 set(testname ${CLP}TestHelp)
 add_test(NAME ${testname} COMMAND ${Launcher_Command} $<TARGET_FILE:${CLP}Test>
-  ModuleEntryPoint --help
-  )
+ModuleEntryPoint --help
+)
 set_property(TEST ${testname} PROPERTY LABELS ${CLP})
 
 #-----------------------------------------------------------------------------
 if(QINPROSTATE001)
-  set(testname QINProstate001)
+set(testname QINProstate001)
+add_test(NAME ${testname} COMMAND ${Launcher_Command} $<TARGET_FILE:${CLP}Test>
+ --compare ${QINPROSTATE001}/Baseline/phantom-ktrans.nrrd
+ ${TEMP}/${testname}-ktrans.nrrd
+ ModuleEntryPoint        
+             --T1Tissue 1597
+             --T1Blood 1600
+             --relaxivity 0.0039
+             --S0grad 15.0
+             --hematocrit 0.4
+             --aucTimeInterval 90
+             --fTolerance 1e-4 
+             --gTolerance 1e-4 
+             --xTolerance 1e-5 
+             --epsilon 1e-9 
+             --maxIter 200 
+             --outputKtrans ${TEMP}/${testname}-ktrans.nrrd 
+             --outputVe ${TEMP}/${testname}-ve.nrrd
+             --outputMaxSlope ${TEMP}/${testname}-maxslope.nrrd
+             --outputAUC ${TEMP}/${testname}-auc.nrrd           
+             --outputBAT ${TEMP}/${testname}-bat.nrrd           
+             --fitted ${TEMP}/${testname}-fit.nrrd
+             --concentrations ${TEMP}/${testname}-conc.nrrd
+             --roiMask ${QINPROSTATE001}/Input/${testname}-phantom-ROI.nrrd
+             --aifMask ${QINPROSTATE001}/Input/${testname}-phantom-AIF.nrrd
+             ${QINPROSTATE001}/Input/${testname}-phantom.nrrd                   
+             )
+set_property(TEST ${testname} PROPERTY LABELS ${CLP})
+endif()
+
+#-----------------------------------------------------------------------------
+if(GRADIENTPHANTOM)
+  set(testname GRADIENTPHANTOM)
   add_test(NAME ${testname} COMMAND ${Launcher_Command} $<TARGET_FILE:${CLP}Test>
-    --compare ${QINPROSTATE001}/Baseline/phantom-ktrans.nrrd
+    --compare ${GRADIENTPHANTOM}/PkModeling_Phantom_ktrans.nrrd
     ${TEMP}/${testname}-ktrans.nrrd
     ModuleEntryPoint        
-                --T1Tissue 1597
-                --T1Blood 1600
-                --relaxivity 0.0039
+                --T1Tissue 1350
+                --T1Blood 1440
+                --relaxivity 0.0045
                 --S0grad 15.0
-                --hematocrit 0.4
+                --hematocrit 0.45
                 --aucTimeInterval 90
                 --fTolerance 1e-4 
                 --gTolerance 1e-4 
@@ -46,9 +79,9 @@ if(QINPROSTATE001)
                 --outputBAT ${TEMP}/${testname}-bat.nrrd           
                 --fitted ${TEMP}/${testname}-fit.nrrd
                 --concentrations ${TEMP}/${testname}-conc.nrrd
-                --roiMask ${QINPROSTATE001}/Input/${testname}-phantom-ROI.nrrd
-                --aifMask ${QINPROSTATE001}/Input/${testname}-phantom-AIF.nrrd
-                ${QINPROSTATE001}/Input/${testname}-phantom.nrrd                   
+                --roiMask ${GRADIENTPHANTOM}/PKModeling_Phantom_ROI-label.nrrd
+                --aifMask ${GRADIENTPHANTOM}/PKModeling_Phantom_AIF-label.nrrd
+                ${GRADIENTPHANTOM}/PkModeling_Phantom_phantom.nrrd                
                 )
   set_property(TEST ${testname} PROPERTY LABELS ${CLP})
 endif()
@@ -113,7 +146,7 @@ endif()
 #                 --outputAUC ${TEMP}/AUCVolumeSynSmallVolume.nrrd   
 #   )
 # set_property(TEST ${testname} PROPERTY LABELS ${CLP})
- 
+
 # set(testname ${CLP}TestDukeSyntheticData)
 # add_test(NAME ${testname} COMMAND ${Launcher_Command} $<TARGET_FILE:${CLP}Test>
 #   ModuleEntryPoint        
@@ -132,7 +165,7 @@ endif()
 #                 --outputAUC ${TEMP}/AUCVolumeSyn.nrrd           
 #   )
 # set_property(TEST ${testname} PROPERTY LABELS ${CLP})
- 
+
 # set(testname ${CLP}TestDCEMRIData)
 # add_test(NAME ${testname} COMMAND ${Launcher_Command} $<TARGET_FILE:${CLP}Test>
 #                 ModuleEntryPoint
